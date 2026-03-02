@@ -34,7 +34,8 @@
               "features/attendance",
               "features/profile",
               "features/sunday-mass",
-              "features/events"
+              "features/events",
+              "features/birthdays"
             ]
           },
           {

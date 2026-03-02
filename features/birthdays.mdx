@@ -1,0 +1,141 @@
+---
+title: Cumpleaños
+description: Visualiza los próximos cumpleaños de los catequistas de la Pastoral Mariana
+---
+
+## Descripción general
+
+La sección de Cumpleaños permite a los catequistas ver los próximos cumpleaños de sus compañeros, fomentando la comunidad y el compañerismo dentro de la Pastoral Mariana.
+
+## Acceso a la función
+
+Para acceder a la página de cumpleaños:
+
+1. Inicia sesión en la aplicación
+2. En el sidebar, haz clic en **Cumpleaños**
+3. La página mostrará una cuadrícula con los catequistas que cumplen años en los próximos días
+
+## Características
+
+### Vista de cuadrícula
+
+<CardGroup cols={2}>
+  <Card title="Información del catequista" icon="user">
+    Foto de perfil, nombre completo y fecha de cumpleaños
+  </Card>
+  <Card title="Orden cronológico" icon="calendar">
+    Los cumpleaños se muestran ordenados del más próximo al más lejano
+  </Card>
+</CardGroup>
+
+### Información mostrada
+
+Para cada catequista que cumple años próximamente, se muestra:
+
+- **Foto de perfil**: Imagen del catequista
+- **Nombre completo**: Nombre y apellido
+- **Fecha de cumpleaños**: Día y mes del cumpleaños
+- **Edad**: Años que cumplirá
+
+<Note>
+  La página solo muestra catequistas que tienen su fecha de nacimiento registrada en el sistema.
+</Note>
+
+## Implementación técnica
+
+La página de cumpleaños está implementada en `~/workspace/source/app/(main)/birthdays/page.tsx`:
+
+```typescript
+import BirthdayGrid from '@/components/birthdays/birthdayGrid'
+import BirthdayGridSkeleton from '@/components/birthdays/birthdayGridSkeleton'
+import { Suspense } from 'react'
+
+export default function Page() {
+  return (
+    <>
+      <div className='flex flex-col gap-2 text-left'>
+        <h1 className='text-xl font-semibold sm:text-2xl'>
+          Próximos Cumpleaños
+        </h1>
+        <p className='text-sm text-neutral-500'>
+          Aquí puedes ver los cumpleaños de los catequistas en los próximos
+          días.
+        </p>
+      </div>
+      <Suspense fallback={<BirthdayGridSkeleton />}>
+        <BirthdayGrid />
+      </Suspense>
+    </>
+  )
+}
+```
+
+### Componentes
+
+La funcionalidad utiliza dos componentes principales:
+
+1. **BirthdayGrid**: Componente que renderiza la cuadrícula de cumpleaños
+2. **BirthdayGridSkeleton**: Estado de carga mientras se obtienen los datos
+
+<Info>
+  La página utiliza React Suspense para mostrar un skeleton mientras se cargan los datos de cumpleaños.
+</Info>
+
+## Fuente de datos
+
+Los datos de cumpleaños provienen del campo `dateOfBirth` en la tabla `users`:
+
+```typescript
+// De db/schema.ts
+export const usersTable = pgTable('users', {
+  id: text().primaryKey(),
+  firstName: text('first_name').notNull(),
+  lastName: text('last_name').notNull(),
+  dateOfBirth: date('date_of_birth').notNull(),
+  // ... otros campos
+})
+```
+
+### Cálculo de próximos cumpleaños
+
+El sistema:
+
+1. Obtiene todos los usuarios con `dateOfBirth` válido
+2. Calcula los cumpleaños que ocurren en los próximos días
+3. Ordena por proximidad (del más cercano al más lejano)
+4. Calcula la edad que cumplirá cada catequista
+
+## Privacidad
+
+<Warning>
+  Todos los catequistas registrados pueden ver los cumpleaños de sus compañeros. No hay restricciones de privacidad en esta función.
+</Warning>
+
+Si un catequista no desea que su cumpleaños sea visible, debe contactar con un administrador para que ajuste la configuración de su perfil.
+
+## Casos de uso
+
+### Planificación de celebraciones
+
+Los coordinadores pueden usar esta página para:
+
+- Planificar celebraciones grupales
+- Enviar felicitaciones personalizadas
+- Organizar actividades especiales en las reuniones
+
+### Fortalecimiento de comunidad
+
+La función de cumpleaños ayuda a:
+
+- Fomentar el compañerismo entre catequistas
+- Crear un ambiente más cercano y familiar
+- Recordar fechas importantes de los miembros del equipo
+
+<Tip>
+  Considera felicitar a tus compañeros catequistas en su día especial para fortalecer los lazos de la comunidad pastoral.
+</Tip>
+
+## Navegación relacionada
+
+- [Perfil de usuario](/features/profile) - Actualiza tu fecha de nacimiento
+- [Usar la aplicación](/guides/using-the-app) - Guía general de navegación
