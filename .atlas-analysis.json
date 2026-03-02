@@ -1,0 +1,98 @@
+{
+  "projectType": "saas",
+  "projectName": "Pastoral Digital",
+  "projectDescription": "Una plataforma digital para catequistas de la Pastoral Mariana con gestión de asistencias y perfil digital.",
+  "theme": "almond",
+  "primaryColor": "#4A5D7A",
+  "lightColor": "#7B92B0",
+  "darkColor": "#2C3E50",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": ["introduction", "quickstart", "installation"]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/digital-id",
+              "features/attendance",
+              "features/profile",
+              "features/sunday-mass",
+              "features/events"
+            ]
+          },
+          {
+            "group": "User Guides",
+            "pages": [
+              "guides/using-the-app",
+              "guides/scanning-qr",
+              "guides/viewing-attendance",
+              "guides/updating-profile"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Admin Guide",
+        "groups": [
+          {
+            "group": "Administration",
+            "pages": [
+              "admin/overview",
+              "admin/user-management",
+              "admin/event-management",
+              "admin/attendance-records",
+              "admin/mass-verification"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "admin/setup",
+              "admin/environment-variables",
+              "admin/database-setup",
+              "admin/authentication"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Endpoints",
+            "pages": [
+              "api/overview",
+              "api/attendance",
+              "api/events",
+              "api/users",
+              "api/masses"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Digital ID with QR code for attendance tracking",
+    "Attendance record management with multiple statuses",
+    "User profiles with catechist information",
+    "Sunday mass registration and verification",
+    "Event management system",
+    "Admin dashboard for user and event management",
+    "Role-based access control",
+    "Progressive Web App (PWA) support"
+  ],
+  "publicApiSurface": [
+    "POST /api/attendance - Register attendance",
+    "GET /api/events - List events",
+    "GET /api/events/[id] - Get event details",
+    "POST /api/masses - Register Sunday mass",
+    "GET /api/users - List users",
+    "POST /api/uploadthing - Upload files"
+  ]
+}
