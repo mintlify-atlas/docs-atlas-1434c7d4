@@ -1,0 +1,225 @@
+---
+title: Visión general de la API
+description: Introducción a la API REST de Pastoral Digital, incluyendo autenticación, patrones de respuesta y mejores prácticas
+---
+
+## Introducción
+
+La API de Pastoral Digital proporciona acceso programático a los datos de asistencia, eventos, usuarios y misas dominicales. Está construida con Next.js 16 y utiliza API Routes para los endpoints REST.
+
+## URL base
+
+Todos los endpoints de la API están disponibles bajo la ruta base:
+
+```
+https://tu-dominio.com/api
+```
+
+## Autenticación
+
+La API utiliza Clerk para autenticación y autorización. Todas las solicitudes deben incluir credenciales de sesión válidas.
+
+<Note>
+  Todos los endpoints de la API requieren que el usuario esté autenticado. Las solicitudes no autenticadas recibirán una respuesta `401 Unauthorized`.
+</Note>
+
+### Roles de usuario
+
+La API implementa control de acceso basado en roles (RBAC) con los siguientes roles:
+
+- **`member`**: Usuario estándar con acceso limitado
+- **`admin`**: Administrador con acceso completo a todos los endpoints
+- **`manager`**: Gestor con acceso a funciones de supervisión (ej: verificación de misas)
+
+### Ejemplo de autenticación
+
+La autenticación se maneja automáticamente cuando se realizan solicitudes desde el frontend de la aplicación. El sistema verifica la sesión usando Clerk:
+
+```typescript
+import { auth } from '@clerk/nextjs/server'
+
+const { userId } = await auth()
+if (!userId) {
+  return { error: 'Unauthorized', status: 401 }
+}
+```
+
+## Formato de respuesta
+
+La API utiliza dos patrones de respuesta según el endpoint:
+
+### Patrón 1: Respuesta con success flag
+
+La mayoría de los endpoints devuelven un objeto con un flag `success` y datos o errores:
+
+```json
+{
+  "success": true,
+  "data": [...]
+}
+```
+
+En caso de error:
+
+```json
+{
+  "success": false,
+  "error": "Mensaje de error descriptivo"
+}
+```
+
+### Patrón 2: Respuesta directa
+
+Algunos endpoints (como `/api/events/today`) devuelven los datos directamente:
+
+```json
+{
+  "id": 1,
+  "name": "Catequesis Semanal",
+  "date": "2026-03-07T10:00:00Z",
+  ...
+}
+```
+
+O un objeto de error:
+
+```json
+{
+  "error": "Mensaje de error"
+}
+```
+
+## Códigos de estado HTTP
+
+La API utiliza códigos de estado HTTP estándar:
+
+| Código | Significado | Descripción |
+|--------|-------------|-------------|
+| `200` | OK | Solicitud exitosa |
+| `401` | Unauthorized | No autenticado - se requiere inicio de sesión |
+| `403` | Forbidden | No autorizado - rol insuficiente |
+| `404` | Not Found | Recurso no encontrado |
+| `500` | Internal Server Error | Error del servidor |
+
+## Manejo de errores
+
+### Errores de base de datos
+
+Los errores de la base de datos (Neon) se manejan con mensajes específicos:
+
+```typescript
+import { NeonDbError } from '@neondatabase/serverless'
+import { handleDbError } from '@/lib/error'
+
+try {
+  // operación de base de datos
+} catch (error) {
+  if (error instanceof NeonDbError) {
+    return { error: handleDbError(error) }
+  }
+  return { error: 'Ha ocurrido un error inesperado' }
+}
+```
+
+### Errores comunes
+
+<Warning>
+  Los endpoints protegidos por roles devolverán `403 Forbidden` si el usuario no tiene el rol requerido, incluso si está autenticado.
+</Warning>
+
+Ejemplos de errores:
+
+```json
+// Error de autenticación
+{
+  "success": false,
+  "error": "Unauthorized"
+}
+
+// Error de permisos
+{
+  "success": false,
+  "error": "Forbidden"
+}
+
+// Recurso no encontrado
+{
+  "success": false,
+  "error": "No attendance records found"
+}
+```
+
+## Server Actions vs API Routes
+
+Pastoral Digital utiliza dos enfoques para las operaciones del servidor:
+
+### API Routes (GET)
+
+Utilizados principalmente para **lectura** de datos:
+- `/api/attendance` - Obtener registros de asistencia
+- `/api/events/today` - Obtener evento del día
+- `/api/users` - Obtener usuarios
+- `/api/masses` - Obtener registros de misas
+
+### Server Actions (POST/PUT/DELETE)
+
+Utilizados para **escritura** y operaciones mutativas:
+- `registerAttendanceRecord()` - Crear asistencia
+- `setAttendanceRecordStatus()` - Actualizar estado de asistencia
+- `verifyMassRecord()` - Verificar registro de misa
+- `setUserSchedule()` - Actualizar horario de usuario
+
+<Note>
+  Las Server Actions se invocan directamente desde componentes del lado del servidor y no requieren llamadas HTTP explícitas.
+</Note>
+
+## Revalidación de caché
+
+La aplicación utiliza Next.js cache tags para revalidación automática:
+
+```typescript
+import { updateTag } from 'next/cache'
+
+// Después de una mutación
+updateTag('attendance') // Revalida datos de asistencia
+updateTag('users')      // Revalida datos de usuarios
+updateTag('sundayMasses') // Revalida datos de misas
+```
+
+Esto garantiza que los datos en caché se actualicen después de cambios en la base de datos.
+
+## Tipos de datos
+
+La API utiliza TypeScript con tipos inferidos de Drizzle ORM:
+
+```typescript
+import { SelectUser, SelectAttendance, SelectEvent } from '@/db/schema'
+
+// Tipos extendidos con relaciones
+import { FetchAttendanceProps, FetchEventProps } from '@/types'
+```
+
+Ver el esquema completo en: `~/workspace/source/db/schema.ts`
+
+## Paginación
+
+<Note>
+  Actualmente, la API no implementa paginación. Todos los endpoints devuelven resultados completos.
+</Note>
+
+Para conjuntos de datos grandes, considera implementar límites del lado del cliente.
+
+## Rate limiting
+
+<Warning>
+  La API no implementa rate limiting a nivel de aplicación. Se recomienda configurar rate limiting a nivel de infraestructura (ej: Vercel, Cloudflare).
+</Warning>
+
+## Próximos pasos
+
+Explora los endpoints específicos:
+
+- [Attendance API](/api/attendance) - Gestión de registros de asistencia
+- [Events API](/api/events) - Consulta de eventos
+- [Users API](/api/users) - Gestión de usuarios
+- [Masses API](/api/masses) - Registros de misas dominicales

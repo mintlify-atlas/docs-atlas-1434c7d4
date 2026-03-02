@@ -1,0 +1,358 @@
+---
+title: Verificación de misas dominicales
+description: Revisa y verifica registros de asistencia a misa dominical con evidencia fotográfica desde el panel de administración
+---
+
+## Descripción
+
+El sistema de verificación de misas dominicales permite a los administradores revisar, aprobar o rechazar los registros de asistencia a misa que los catequistas envían semanalmente. Cada registro incluye evidencia fotográfica que debe ser verificada.
+
+## Acceso a la gestión de misas
+
+**Ruta**: `/admin/masses` (app/(main)/admin/masses/page.tsx:1)
+
+Desde esta vista, los administradores pueden:
+
+- Visualizar todos los registros de misa enviados
+- Filtrar por estado de verificación (verificado/pendiente)
+- Ver la evidencia fotográfica de cada registro
+- Aprobar o rechazar registros individualmente
+- Exportar datos a formato CSV
+
+## Estructura del registro de misa
+
+La tabla `sunday_masses` (db/schema.ts:155-182) contiene:
+
+<ParamField path="id" type="uuid" required>
+  Identificador único generado con uuidv7()
+</ParamField>
+
+<ParamField path="userId" type="string" required>
+  ID del catequista que asistió a misa (referencia a usersTable.id)
+</ParamField>
+
+<ParamField path="parish" type="string" required>
+  Nombre de la parroquia donde asistió a misa
+</ParamField>
+
+<ParamField path="sundayDate" type="date" default="now()">
+  Fecha del domingo correspondiente a la misa
+</ParamField>
+
+<ParamField path="evidenceFileKey" type="string" required>
+  Clave del archivo de evidencia en el almacenamiento (campo único)
+</ParamField>
+
+<ParamField path="evidenceFileHash" type="string" required>
+  Hash del archivo para prevenir duplicados (campo único)
+</ParamField>
+
+<ParamField path="verified" type="boolean" default="false">
+  Estado de verificación del registro
+</ParamField>
+
+<ParamField path="verifiedBy" type="string">
+  ID del administrador que verificó el registro (opcional hasta la verificación)
+</ParamField>
+
+<ParamField path="verifiedAt" type="timestamp">
+  Fecha y hora de la verificación (opcional hasta la verificación)
+</ParamField>
+
+## Columnas de la tabla de misas
+
+La tabla de administración (components/admin/massesColumns.tsx:53) muestra:
+
+<ParamField path="nombreCompleto" type="string">
+  Nombre completo del catequista (firstName + lastName)
+</ParamField>
+
+<ParamField path="category" type="UserCategory">
+  Categoría del catequista (STUDENT/ALUMNI/TEACHER)
+</ParamField>
+
+<ParamField path="parroquia" type="string">
+  Nombre de la parroquia reportada por el catequista
+</ParamField>
+
+<ParamField path="evidencia" type="link">
+  Enlace para visualizar la imagen de evidencia en nueva pestaña
+</ParamField>
+
+<ParamField path="fechaYHora" type="timestamp">
+  Fecha y hora de creación del registro (formato PP pp, es-PE)
+</ParamField>
+
+<ParamField path="verificado" type="boolean">
+  Estado visual del registro (Verificado/Pendiente)
+</ParamField>
+
+<ParamField path="actions" type="component">
+  Botones de verificar/rechazar según el estado actual
+</ParamField>
+
+## Restricciones de envío
+
+Los catequistas solo pueden enviar registros de misa en un periodo específico (actions/mass.ts:35-43):
+
+### Periodo válido de envío
+
+<Steps>
+  <Step title="Domingo">
+    Durante todo el día domingo (día 0 de la semana).
+  </Step>
+  
+  <Step title="Lunes hasta las 6:00 PM">
+    Desde las 12:00 AM hasta las 6:00 PM del lunes (día 1).
+  </Step>
+</Steps>
+
+```typescript
+const peruDate = new TZDate(new Date(), 'America/Lima')
+
+const isValidTimeframe =
+  peruDate.getDay() === 0 || // Sunday
+  (peruDate.getDay() === 1 && peruDate.getHours() < 18) // Monday before 6 PM
+
+if (!isValidTimeframe)
+  return {
+    error: 'El registro de misa solo está disponible los domingos y lunes hasta las 6:00 PM.',
+  }
+```
+
+<Info>
+  Los registros enviados el lunes se atribuyen al domingo anterior automáticamente.
+</Info>
+
+## Verificar un registro de misa
+
+Para aprobar un registro de misa:
+
+<Steps>
+  <Step title="Revisa la evidencia fotográfica">
+    Haz clic en el enlace "Ver" en la columna de Evidencia para abrir la imagen en una nueva pestaña.
+  </Step>
+  
+  <Step title="Valida la autenticidad">
+    Verifica que la imagen corresponda efectivamente a una asistencia a misa.
+  </Step>
+  
+  <Step title="Haz clic en el botón de verificar">
+    Presiona el icono de verificación (✓) en la columna de acciones.
+  </Step>
+  
+  <Step title="Confirma el cambio">
+    El registro se marca como verificado y el estado se actualiza inmediatamente.
+  </Step>
+</Steps>
+
+La función `verifyMassRecord()` (actions/mass.ts:77-110) gestiona la aprobación:
+
+```typescript
+export async function verifyMassRecord(massId: string) {
+  if (
+    !(await checkRole(UserRole.ADMIN)) &&
+    !(await checkRole(UserRole.MANAGER))
+  ) {
+    return { error: 'No estas autorizado para verificar misas.' }
+  }
+
+  const { userId: verifiedById } = await auth()
+
+  if (!verifiedById) {
+    return {
+      error: 'No se pudo obtener el usuario. Por favor, vuelve a iniciar sesión.',
+    }
+  }
+
+  return await updateSundayMassRecordVerification(massId, true, verifiedById)
+    .then(() => {
+      updateTag('sundayMasses')
+      return {
+        success: 'Se ha verificado la asistencia a misa correctamente.',
+      }
+    })
+}
+```
+
+## Rechazar un registro de misa
+
+Para rechazar un registro que no cumple con los criterios:
+
+<Steps>
+  <Step title="Identifica el problema">
+    Determina por qué la evidencia no es válida (imagen borrosa, no corresponde a misa, etc.).
+  </Step>
+  
+  <Step title="Haz clic en el botón de rechazar">
+    Presiona el icono de rechazo (✗) en la columna de acciones.
+  </Step>
+  
+  <Step title="El registro se marca como rechazado">
+    El estado cambia a "pendiente" nuevamente.
+  </Step>
+</Steps>
+
+<Warning>
+  Rechazar un registro previamente verificado cambiará su estado a `verified: false`. Comunica al catequista la razón del rechazo para que pueda corregir el problema.
+</Warning>
+
+La función `rejectMassRecord()` (actions/mass.ts:112-145) gestiona el rechazo:
+
+```typescript
+export async function rejectMassRecord(massId: string) {
+  if (
+    !(await checkRole(UserRole.ADMIN)) &&
+    !(await checkRole(UserRole.MANAGER))
+  ) {
+    return { error: 'No estas autorizado para rechazar misas.' }
+  }
+
+  const { userId: verifiedById } = await auth()
+
+  if (!verifiedById) {
+    return {
+      error: 'No se pudo obtener el usuario. Por favor, vuelve a iniciar sesión.',
+    }
+  }
+
+  return await updateSundayMassRecordVerification(massId, false, verifiedById)
+    .then(() => {
+      updateTag('sundayMasses')
+      return {
+        success: 'Se ha rechazado la asistencia a misa correctamente.',
+      }
+    })
+}
+```
+
+## Visualización de evidencia
+
+Las imágenes de evidencia se almacenan en un servicio de archivos y se acceden mediante:
+
+```typescript
+<a
+  href={`https://fymwpl3ap9.ufs.sh/${row.original.evidenceFileKey}`}
+  target='_blank'
+  rel='noopener noreferrer'
+>
+  <IconPhoto className='h-4 w-4' />
+  Ver
+</a>
+```
+
+- **URL base**: `https://fymwpl3ap9.ufs.sh/`
+- **Clave de archivo**: Generada al momento de subir la imagen
+- **Seguridad**: El hash previene duplicados exactos
+
+<Info>
+  El componente abre la imagen en una nueva pestaña con `target='_blank'` para facilitar la revisión sin perder el contexto de la tabla.
+</Info>
+
+## Estados del registro
+
+El componente `SundayMassStatusLabel` muestra dos estados visuales:
+
+### Verificado
+
+- **Condición**: `verified === true`
+- **Visualización**: Etiqueta verde con texto "Verificado"
+- **Acción disponible**: Botón de rechazo (✗)
+
+### Pendiente
+
+- **Condición**: `verified === false`
+- **Visualización**: Etiqueta amarilla con texto "Pendiente"
+- **Acción disponible**: Botón de verificación (✓)
+
+## Exportar registros de misas
+
+El componente `ExportToCsvMasses` permite descargar todos los registros en formato CSV:
+
+1. Haz clic en el botón "Exportar" en la parte superior derecha
+2. El archivo incluye:
+   - Nombre completo del catequista
+   - Categoría
+   - Parroquia
+   - Fecha del domingo
+   - Estado de verificación
+   - Fecha de verificación
+   - Verificador
+3. Utiliza el archivo para reportes y análisis externos
+
+## Restricciones y validaciones
+
+El esquema implementa las siguientes restricciones (db/schema.ts:177-181):
+
+### Índice único de usuario-fecha
+
+```typescript
+uniqueIndex('unq_user_sunday_date').on(table.userId, table.sundayDate)
+```
+
+Esto previene que un catequista registre múltiples misas para el mismo domingo.
+
+### Índices de rendimiento
+
+- `idx_sunday_masses_user_id`: Optimiza búsquedas por catequista
+- `idx_sunday_masses_verified`: Optimiza filtros por estado de verificación
+
+### Unicidad de archivos
+
+- `evidenceFileKey`: Campo único previene colisiones de nombres
+- `evidenceFileHash`: Campo único detecta archivos duplicados
+
+## Roles autorizados
+
+La verificación de misas está disponible para dos roles (actions/mass.ts:78-82):
+
+<ParamField path="UserRole.ADMIN" type="string">
+  Administradores con acceso completo al sistema
+</ParamField>
+
+<ParamField path="UserRole.MANAGER" type="string">
+  Gestores con permisos específicos de verificación
+</ParamField>
+
+```typescript
+if (
+  !(await checkRole(UserRole.ADMIN)) &&
+  !(await checkRole(UserRole.MANAGER))
+) {
+  return { error: 'No estas autorizado para verificar misas.' }
+}
+```
+
+## Relaciones de datos
+
+Cada registro de misa tiene las siguientes relaciones (db/schema.ts:239-252):
+
+```typescript
+sundayMassesRelations = {
+  user: one(usersTable, {
+    fields: [sundayMassesTable.userId],
+    references: [usersTable.id],
+    relationName: 'user',
+  }),
+  verifier: one(usersTable, {
+    fields: [sundayMassesTable.verifiedBy],
+    references: [usersTable.id],
+    relationName: 'verifier',
+  }),
+}
+```
+
+- **user**: Relación con el catequista que asistió a misa
+- **verifier**: Relación con el administrador que verificó el registro
+
+<Info>
+  La eliminación de un usuario en cascada (`onDelete: 'cascade'`) también eliminará sus registros de misa asociados.
+</Info>
+
+## Revalidación de datos
+
+Utiliza el botón `RevalidateButton` con tag='sundayMasses' para actualizar la tabla después de:
+
+- Verificar o rechazar múltiples registros
+- Recibir nuevos envíos de catequistas
+- Realizar cambios desde otra sesión o dispositivo

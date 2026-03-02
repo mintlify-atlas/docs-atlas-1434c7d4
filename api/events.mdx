@@ -1,0 +1,307 @@
+---
+title: Events API
+description: Endpoints para consultar eventos y actividades de catequesis
+---
+
+## Obtener evento del día
+
+`GET /api/events/today`
+
+Obtiene el evento programado para el día actual.
+
+### Autenticación requerida
+
+<Warning>
+  Este endpoint requiere rol de **ADMIN**. Los usuarios con rol `member` recibirán `403 Forbidden`.
+</Warning>
+
+### Respuesta exitosa
+
+```json
+{
+  "id": 1,
+  "name": "Catequesis Semanal",
+  "description": "Sesión de catequesis para confirmación",
+  "date": "2026-03-02T14:00:00.000Z",
+  "secondTurnDate": "2026-03-02T16:00:00.000Z",
+  "endDate": "2026-03-02T18:00:00.000Z",
+  "locationId": 1,
+  "createdAt": "2026-02-20T10:00:00.000Z",
+  "updatedAt": "2026-02-20T10:00:00.000Z",
+  "location": {
+    "id": 1,
+    "name": "Parroquia Santa María",
+    "address": "Av. España 1234",
+    "city": "Trujillo",
+    "postalCode": "13001",
+    "country": "Perú",
+    "googleMapsUrl": "https://maps.google.com/?q=-8.1116,-79.0288"
+  }
+}
+```
+
+### Campos de respuesta
+
+<ResponseField name="id" type="number">
+  ID autoincremental del evento
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Nombre del evento
+</ResponseField>
+
+<ResponseField name="description" type="string" optional>
+  Descripción detallada del evento
+</ResponseField>
+
+<ResponseField name="date" type="string">
+  Timestamp ISO 8601 de inicio del primer turno
+</ResponseField>
+
+<ResponseField name="secondTurnDate" type="string">
+  Timestamp ISO 8601 de inicio del segundo turno
+</ResponseField>
+
+<ResponseField name="endDate" type="string">
+  Timestamp ISO 8601 de finalización del evento
+</ResponseField>
+
+<ResponseField name="locationId" type="number">
+  ID de la ubicación donde se realiza el evento
+</ResponseField>
+
+<ResponseField name="location" type="object">
+  Información completa de la ubicación
+  
+  <ResponseField name="location.name" type="string">
+    Nombre del lugar
+  </ResponseField>
+  
+  <ResponseField name="location.address" type="string">
+    Dirección completa
+  </ResponseField>
+  
+  <ResponseField name="location.city" type="string">
+    Ciudad (por defecto: "Trujillo")
+  </ResponseField>
+  
+  <ResponseField name="location.postalCode" type="string">
+    Código postal
+  </ResponseField>
+  
+  <ResponseField name="location.country" type="string">
+    País (por defecto: "Perú")
+  </ResponseField>
+  
+  <ResponseField name="location.googleMapsUrl" type="string">
+    URL de Google Maps para la ubicación
+  </ResponseField>
+</ResponseField>
+
+### Errores
+
+```json
+// No autenticado
+{
+  "error": "Unauthorized"
+}
+
+// Sin permisos de admin
+{
+  "error": "Forbidden"
+}
+
+// No hay evento para hoy
+{
+  "error": "No hay ningún evento programado para hoy."
+}
+
+// Error del servidor
+{
+  "error": "Ha ocurrido un error al obtener el evento del día."
+}
+```
+
+<Note>
+  Este endpoint devuelve el error directamente como objeto `{error: string}` en lugar del formato `{success: false, error: string}` usado en otros endpoints.
+</Note>
+
+### Ejemplo de uso
+
+```typescript
+async function getTodayEvent() {
+  const response = await fetch('/api/events/today')
+  
+  if (!response.ok) {
+    const { error } = await response.json()
+    throw new Error(error)
+  }
+  
+  const event = await response.json()
+  
+  // Verificar si hay evento
+  if ('error' in event) {
+    console.log('No hay evento hoy')
+    return null
+  }
+  
+  return event
+}
+```
+
+### Implementación
+
+El endpoint está definido en `~/workspace/source/app/api/events/today/route.ts:7-49`:
+
+```typescript
+export async function GET() {
+  const { userId } = await auth()
+  if (!userId) {
+    return NextResponse.json(
+      { error: 'Unauthorized' },
+      { status: 401 }
+    )
+  }
+
+  if (!(await checkRole(UserRole.ADMIN))) {
+    return NextResponse.json(
+      { error: 'Forbidden' },
+      { status: 403 }
+    )
+  }
+
+  return await getTodayEvent()
+    .then(async (event) => {
+      if (!event) {
+        return NextResponse.json(
+          { error: 'No hay ningún evento programado para hoy.' },
+          { status: 404 }
+        )
+      }
+
+      return NextResponse.json(event, { status: 200 })
+    })
+    .catch((error) => {
+      console.error(error)
+      return NextResponse.json(
+        { error: 'Ha ocurrido un error al obtener el evento del día.' },
+        { status: 500 }
+      )
+    })
+}
+```
+
+## Lógica de "día actual"
+
+El endpoint determina el evento del día basándose en:
+
+1. La fecha actual del servidor
+2. Eventos cuyo campo `date` corresponde al día actual
+3. Incluye información de la ubicación mediante JOIN
+
+La consulta se realiza en `~/workspace/source/queries/select.ts` con la función `getTodayEvent()`.
+
+## Casos de uso
+
+### Dashboard de asistencia
+
+```typescript
+import { useEffect, useState } from 'react'
+
+function AttendanceDashboard() {
+  const [event, setEvent] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/events/today')
+      .then(res => res.json())
+      .then(data => {
+        if (!data.error) {
+          setEvent(data)
+        }
+      })
+      .finally(() => setLoading(false))
+  }, [])
+
+  if (loading) return <div>Cargando evento del día...</div>
+  if (!event) return <div>No hay evento programado para hoy</div>
+
+  return (
+    <div>
+      <h1>{event.name}</h1>
+      <p>{event.description}</p>
+      <p>Ubicación: {event.location.name}</p>
+      <p>Hora de inicio: {new Date(event.date).toLocaleTimeString()}</p>
+    </div>
+  )
+}
+```
+
+### Verificación previa al registro de asistencia
+
+```typescript
+async function checkEventBeforeAttendance() {
+  const response = await fetch('/api/events/today')
+  const event = await response.json()
+
+  if (event.error) {
+    alert('No hay evento programado para hoy. No se puede registrar asistencia.')
+    return null
+  }
+
+  return event.id // Usar este ID para registrar asistencia
+}
+```
+
+## Estructura de la base de datos
+
+Los eventos se almacenan con el siguiente esquema (definido en `~/workspace/source/db/schema.ts:118-137`):
+
+```typescript
+export const eventsTable = pgTable(
+  'events',
+  {
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    name: text().notNull(),
+    description: text(),
+    date: timestamp('date').notNull(),
+    secondTurnDate: timestamp('second_turn_date').notNull(),
+    endDate: timestamp('end_date').notNull(),
+    locationId: integer('location_id')
+      .references(() => locationsTable.id, { onDelete: 'cascade' })
+      .notNull(),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at')
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [index('idx_events_date').on(table.date)]
+)
+```
+
+### Relaciones
+
+- **location**: Relación many-to-one con `locationsTable`
+- **attendanceRecords**: Relación one-to-many con `attendanceRecordsTable`
+
+### Índices
+
+- `idx_events_date`: Índice en el campo `date` para optimizar consultas por fecha
+
+## Turnos de eventos
+
+Los eventos de catequesis típicamente tienen dos turnos:
+
+1. **Primer turno** (`date`): Turno principal
+2. **Segundo turno** (`secondTurnDate`): Turno alternativo
+3. **Fin del evento** (`endDate`): Hora de cierre
+
+Estos campos se utilizan para:
+- Determinar estados de asistencia (a tiempo, tardanza)
+- Establecer ventanas de registro
+- Rellenar faltas automáticas después de `endDate`
+
+<Note>
+  Los catequistas pueden asistir a cualquiera de los dos turnos, dependiendo de su disponibilidad y el programa asignado.
+</Note>

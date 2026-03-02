@@ -1,0 +1,360 @@
+---
+title: Registros de asistencia
+description: Visualiza, gestiona y registra manualmente asistencias de catequistas con diferentes métodos y estados
+---
+
+## Descripción
+
+El sistema de registros de asistencia permite a los administradores supervisar, modificar y crear registros de asistencia para eventos de catequesis. Cada registro documenta la participación de un catequista en un evento específico.
+
+## Acceso a registros de asistencia
+
+Pastoral Digital ofrece dos vistas principales para gestionar asistencias:
+
+### Registro de asistencia
+
+**Ruta**: `/admin/records` (app/(main)/admin/records/page.tsx:1)
+
+- Vista general de todos los registros de asistencia
+- Tabla completa con filtros y búsqueda
+- Acciones de modificación y eliminación
+
+### Calendario de asistencia
+
+**Ruta**: `/admin/calendar` (app/(main)/admin/calendar/page.tsx:1)
+
+- Visualización cronológica de asistencias
+- Organización por fechas y eventos
+- Perspectiva temporal de la participación
+
+## Estructura del registro de asistencia
+
+Los registros de asistencia (db/schema.ts:84-116) contienen:
+
+<ParamField path="id" type="uuid" required>
+  Identificador único generado con uuidv7()
+</ParamField>
+
+<ParamField path="userId" type="string" required>
+  ID del catequista que asistió (referencia a usersTable.id)
+</ParamField>
+
+<ParamField path="eventId" type="integer" required>
+  ID del evento al que asistió (referencia a eventsTable.id)
+</ParamField>
+
+<ParamField path="checkInTime" type="timestamp" default="now()">
+  Fecha y hora exacta del registro de entrada
+</ParamField>
+
+<ParamField path="status" type="AttendanceStatus" default="A_TIEMPO">
+  Estado de la asistencia (ver estados disponibles abajo)
+</ParamField>
+
+<ParamField path="registeredBy" type="string" required>
+  ID del administrador que registró la asistencia
+</ParamField>
+
+<ParamField path="method" type="AttendanceRecordMethod" default="QR">
+  Método utilizado para registrar la asistencia
+</ParamField>
+
+## Estados de asistencia
+
+Pastoral Digital maneja seis estados de asistencia (types/index.ts:29-36):
+
+<ParamField path="A_TIEMPO" type="string">
+  El catequista llegó dentro del horario establecido
+</ParamField>
+
+<ParamField path="TARDANZA" type="string">
+  El catequista llegó con retraso (primera tardanza)
+</ParamField>
+
+<ParamField path="DOBLE_TARDANZA" type="string">
+  El catequista ha acumulado dos tardanzas
+</ParamField>
+
+<ParamField path="FALTA_JUSTIFICADA" type="string">
+  Ausencia con justificación válida presentada
+</ParamField>
+
+<ParamField path="TARDANZA_JUSTIFICADA" type="string">
+  Llegada tarde con justificación válida
+</ParamField>
+
+<ParamField path="FALTA_INJUSTIFICADA" type="string">
+  Ausencia sin justificación o registro de entrada
+</ParamField>
+
+<Info>
+  Los estados se visualizan con etiquetas de colores en la interfaz mediante el componente `AttendanceStatusLabel`.
+</Info>
+
+## Métodos de registro
+
+Los registros de asistencia se pueden crear mediante tres métodos (types/index.ts:59-63):
+
+### QR Code
+
+**Valor**: `AttendanceRecordMethod.QR`
+
+- Método predeterminado
+- Escaneo del código QR personal del catequista
+- Ruta: `/admin/scan` (app/(main)/admin/scan/page.tsx:1)
+- Componente: `QrScannerTab`
+
+<Steps>
+  <Step title="Accede al escáner QR">
+    Navega a `/admin/scan` desde el menú de administración.
+  </Step>
+  
+  <Step title="Permite acceso a la cámara">
+    Autoriza el uso de la cámara del dispositivo cuando se solicite.
+  </Step>
+  
+  <Step title="Escanea el código QR">
+    Apunta la cámara al Pastoral ID del catequista.
+  </Step>
+  
+  <Step title="Verifica el registro">
+    Confirma que la asistencia se haya registrado correctamente.
+  </Step>
+</Steps>
+
+### NFC
+
+**Valor**: `AttendanceRecordMethod.NFC`
+
+- Registro mediante tecnología Near Field Communication
+- Requiere dispositivo con lector NFC
+- Registro instantáneo por proximidad
+
+### Manual
+
+**Valor**: `AttendanceRecordMethod.MANUAL`
+
+- Registro directo por el administrador
+- Útil para correcciones y ajustes
+- Permite selección de estado específico
+
+## Columnas de la tabla de asistencia
+
+La tabla de administración (components/admin/adminAttendanceColumns.tsx:13) muestra:
+
+<ParamField path="catequista" type="string">
+  Nombre completo del catequista (firstName + lastName)
+</ParamField>
+
+<ParamField path="evento" type="string">
+  Nombre del evento con enlace a la página de detalles
+</ParamField>
+
+<ParamField path="horaDeIngreso" type="timestamp">
+  Hora de check-in formateada (PP pp, locale: es, tz: America/Lima)
+</ParamField>
+
+<ParamField path="estado" type="AttendanceStatus">
+  Etiqueta visual del estado de asistencia
+</ParamField>
+
+<ParamField path="acciones" type="component">
+  Menú de acciones para modificar o eliminar el registro
+</ParamField>
+
+## Registro manual de asistencia
+
+Para crear un registro de asistencia manualmente:
+
+<Steps>
+  <Step title="Valida permisos de administrador">
+    La función `registerAttendanceRecord()` verifica el rol de administrador.
+  </Step>
+  
+  <Step title="Proporciona los datos requeridos">
+    - userId: ID del catequista
+    - eventId: ID del evento
+    - status: Estado de asistencia
+    - method: `AttendanceRecordMethod.MANUAL`
+    - registeredBy: ID del administrador actual
+  </Step>
+  
+  <Step title="Ejecuta la acción">
+    El sistema crea el registro y actualiza el tag 'attendance'.
+  </Step>
+</Steps>
+
+Ejemplo de implementación (actions/attendance.ts:27-67):
+
+```typescript
+export const registerAttendanceRecord = async (
+  data: InsertAttendance
+): Promise<{
+  success?: string
+  warning?: string
+  error?: string
+  lastAttendanceRecord?: FetchAttendanceProps
+}> => {
+  if (!(await checkRole(UserRole.ADMIN))) {
+    return { error: 'No estas autorizado para registrar asistencias.' }
+  }
+
+  return await createAttendanceRecord(data)
+    .then(async () => {
+      const lastAttendanceRecord = await getLastAttendanceRecord()
+      updateTag('attendance')
+
+      if (data.status === AttendanceStatus.FALTA_JUSTIFICADA) {
+        return {
+          warning: 'El registro se procesará como FALTA NO JUSTIFICADA debido a que la entrada está fuera del horario permitido.',
+          lastAttendanceRecord,
+        }
+      }
+
+      return {
+        success: 'Asistencia registrada correctamente.',
+        lastAttendanceRecord,
+      }
+    })
+}
+```
+
+## Modificar estado de asistencia
+
+Los administradores pueden cambiar el estado de un registro existente:
+
+<Steps>
+  <Step title="Abre el menú de acciones">
+    Haz clic en el icono de acciones en la fila del registro.
+  </Step>
+  
+  <Step title="Selecciona 'Modificar estado'">
+    Despliega las opciones de estado disponibles.
+  </Step>
+  
+  <Step title="Elige el nuevo estado">
+    Selecciona el estado apropiado (A TIEMPO, TARDANZA, etc.).
+  </Step>
+  
+  <Step title="Confirma el cambio">
+    El sistema actualiza el registro inmediatamente.
+  </Step>
+</Steps>
+
+La función `setAttendanceRecordStatus()` (actions/attendance.ts:93-118) gestiona la actualización:
+
+```typescript
+export const setAttendanceRecordStatus = async (
+  status: AttendanceStatus,
+  recordId: SelectAttendance['id']
+) => {
+  if (!(await checkRole(UserRole.ADMIN))) {
+    return { error: 'No estas autorizado para modificar asistencias.' }
+  }
+
+  return await updateAttendanceRecordStatus(status, recordId)
+    .then(async () => {
+      updateTag('attendance')
+      return {
+        success: 'Estado de asistencia modificado correctamente.',
+      }
+    })
+}
+```
+
+## Eliminar registro de asistencia
+
+Para eliminar un registro de asistencia:
+
+<Warning>
+  La eliminación de registros es permanente y no se puede deshacer. Utiliza esta función con precaución.
+</Warning>
+
+La función `removeAttendanceRecord()` (actions/attendance.ts:171-193) gestiona la eliminación:
+
+```typescript
+export const removeAttendanceRecord = async (
+  recordId: SelectAttendance['id']
+) => {
+  if (!(await checkRole(UserRole.ADMIN))) {
+    return { error: 'No estas autorizado para eliminar asistencias.' }
+  }
+  return await deleteAttendanceRecord(recordId)
+    .then(async () => {
+      updateTag('attendance')
+      return {
+        success: 'Asistencia eliminada correctamente.',
+      }
+    })
+}
+```
+
+## Restricciones y validaciones
+
+El esquema de base de datos implementa las siguientes restricciones (db/schema.ts:110-115):
+
+### Índice único de usuario-evento
+
+```typescript
+uniqueIndex('unq_user_event').on(table.userId, table.eventId)
+```
+
+Esto previene que un catequista tenga múltiples registros para el mismo evento.
+
+### Índices de rendimiento
+
+- `idx_attendance_records_user_id`: Optimiza búsquedas por usuario
+- `idx_attendance_records_event_id`: Optimiza búsquedas por evento
+- `idx_attendance_records_status`: Optimiza filtros por estado
+
+## Registro masivo de asistencias
+
+Para registrar múltiples asistencias simultáneamente:
+
+```typescript
+export const registerAttendanceRecords = async (data: InsertAttendance[]) => {
+  if (!(await checkRole(UserRole.ADMIN))) {
+    return { error: 'No estas autorizado para registrar asistencias.' }
+  }
+
+  return await createAttendanceRecords(data)
+    .then(() => {
+      updateTag('attendance')
+      return {
+        success: 'Asistencias registrada correctamente.',
+      }
+    })
+}
+```
+
+Esta función es utilizada por:
+- Importación de asistencias desde archivos CSV
+- Función `fillAbsenceRecords()` para marcar faltas automáticamente
+- Operaciones de migración de datos
+
+## Relaciones de datos
+
+Cada registro de asistencia tiene las siguientes relaciones (db/schema.ts:186-206):
+
+```typescript
+attendanceRecordsRelations = {
+  user: one(usersTable, {
+    fields: [attendanceRecordsTable.userId],
+    references: [usersTable.id],
+    relationName: 'user',
+  }),
+  event: one(eventsTable, {
+    fields: [attendanceRecordsTable.eventId],
+    references: [eventsTable.id],
+  }),
+  registeredByUser: one(usersTable, {
+    fields: [attendanceRecordsTable.registeredBy],
+    references: [usersTable.id],
+    relationName: 'registeredByUser',
+  }),
+}
+```
+
+<Info>
+  La eliminación de un usuario o evento en cascada (`onDelete: 'cascade'`) también eliminará sus registros de asistencia relacionados.
+</Info>

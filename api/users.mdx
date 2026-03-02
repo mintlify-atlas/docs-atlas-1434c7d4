@@ -1,0 +1,529 @@
+---
+title: Users API
+description: Endpoints y server actions para gestionar usuarios y catequistas
+---
+
+## Obtener todos los usuarios
+
+`GET /api/users`
+
+Obtiene la lista completa de usuarios registrados en el sistema.
+
+### Autenticación requerida
+
+<Warning>
+  Este endpoint requiere rol de **ADMIN**. Los usuarios con rol `member` recibirán `403 Forbidden`.
+</Warning>
+
+### Respuesta exitosa
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "user_2abc123def456",
+      "dni": "12345678",
+      "firstName": "Juan",
+      "lastName": "Pérez García",
+      "email": "juan.perez@example.com",
+      "phoneNumber": "+51987654321",
+      "dateOfBirth": "1995-06-15",
+      "category": "teacher",
+      "studentCode": null,
+      "role": "member",
+      "schedule": "confirmacion",
+      "createdAt": "2026-01-15T10:00:00.000Z",
+      "updatedAt": "2026-02-20T14:30:00.000Z"
+    },
+    {
+      "id": "user_admin123",
+      "dni": "87654321",
+      "firstName": "María",
+      "lastName": "López Torres",
+      "email": "maria.lopez@example.com",
+      "phoneNumber": "+51912345678",
+      "dateOfBirth": "1990-03-20",
+      "category": "alumni",
+      "studentCode": "EX2015001",
+      "role": "admin",
+      "schedule": "full-time",
+      "createdAt": "2025-12-01T08:00:00.000Z",
+      "updatedAt": "2026-02-28T16:45:00.000Z"
+    }
+  ]
+}
+```
+
+### Campos de respuesta
+
+<ResponseField name="success" type="boolean">
+  Indica si la solicitud fue exitosa
+</ResponseField>
+
+<ResponseField name="data" type="array">
+  Array de usuarios
+  
+  <ResponseField name="data[].id" type="string">
+    ID del usuario (Clerk ID)
+  </ResponseField>
+  
+  <ResponseField name="data[].dni" type="string" optional>
+    Documento Nacional de Identidad (DNI peruano, 8 dígitos)
+  </ResponseField>
+  
+  <ResponseField name="data[].firstName" type="string">
+    Nombre(s) del usuario
+  </ResponseField>
+  
+  <ResponseField name="data[].lastName" type="string">
+    Apellidos del usuario
+  </ResponseField>
+  
+  <ResponseField name="data[].email" type="string">
+    Correo electrónico único
+  </ResponseField>
+  
+  <ResponseField name="data[].phoneNumber" type="string">
+    Número de teléfono
+  </ResponseField>
+  
+  <ResponseField name="data[].dateOfBirth" type="string">
+    Fecha de nacimiento (formato: YYYY-MM-DD)
+  </ResponseField>
+  
+  <ResponseField name="data[].category" type="string">
+    Categoría del usuario. Valores posibles:
+    - `student`: Estudiante activo
+    - `alumni`: Exalumno
+    - `teacher`: Catequista/profesor
+  </ResponseField>
+  
+  <ResponseField name="data[].studentCode" type="string" optional>
+    Código de estudiante (solo para alumnos/exalumnos)
+  </ResponseField>
+  
+  <ResponseField name="data[].role" type="string">
+    Rol del sistema. Valores:
+    - `member`: Usuario estándar
+    - `admin`: Administrador
+    - `manager`: Gestor/coordinador
+  </ResponseField>
+  
+  <ResponseField name="data[].schedule" type="string">
+    Programa o horario asignado. Valores:
+    - `full-time`: Tiempo completo
+    - `primera-comunion`: Primera comunión
+    - `confirmacion`: Confirmación
+    - `logistica`: Logística
+    - `semilleros`: Semilleros
+    - `coordinador`: Coordinador
+  </ResponseField>
+  
+  <ResponseField name="data[].createdAt" type="string">
+    Timestamp de creación del registro
+  </ResponseField>
+  
+  <ResponseField name="data[].updatedAt" type="string">
+    Timestamp de última actualización
+  </ResponseField>
+</ResponseField>
+
+### Errores
+
+```json
+// No autenticado
+{
+  "success": false,
+  "error": "Unauthorized"
+}
+
+// Sin permisos de admin
+{
+  "success": false,
+  "error": "Forbidden"
+}
+
+// No hay usuarios
+{
+  "success": false,
+  "error": "No users records found"
+}
+
+// Error del servidor
+{
+  "success": false,
+  "error": "Failed to fetch user data"
+}
+```
+
+### Ejemplo de uso
+
+```typescript
+async function getAllUsers() {
+  const response = await fetch('/api/users')
+  const { success, data, error } = await response.json()
+
+  if (!success) {
+    throw new Error(error)
+  }
+
+  return data
+}
+
+// Filtrar por categoría en el cliente
+const users = await getAllUsers()
+const teachers = users.filter(u => u.category === 'teacher')
+const students = users.filter(u => u.category === 'student')
+```
+
+## Server Actions
+
+Las operaciones de escritura se realizan mediante Server Actions.
+
+### Registrar nuevo usuario
+
+`registerUser(values: OnboardingFormSchema)`
+
+Registra un nuevo usuario en el sistema durante el proceso de onboarding.
+
+<Note>
+  Esta función está disponible para cualquier usuario autenticado durante su primer inicio de sesión.
+</Note>
+
+#### Parámetros
+
+El esquema de validación `OnboardingFormSchema` requiere:
+
+<ParamField body="firstName" type="string" required>
+  Nombre(s) del usuario
+</ParamField>
+
+<ParamField body="lastName" type="string" required>
+  Apellidos completos
+</ParamField>
+
+<ParamField body="email" type="string" required>
+  Correo electrónico único
+</ParamField>
+
+<ParamField body="phoneNumber" type="string" required>
+  Número de teléfono
+</ParamField>
+
+<ParamField body="dateOfBirth" type="Date" required>
+  Fecha de nacimiento
+</ParamField>
+
+<ParamField body="category" type="UserCategory" required>
+  Categoría: `STUDENT`, `ALUMNI`, o `TEACHER`
+</ParamField>
+
+<ParamField body="dni" type="string" optional>
+  DNI (8 dígitos)
+</ParamField>
+
+<ParamField body="studentCode" type="string" optional>
+  Código de estudiante (requerido para `student` y `alumni`)
+</ParamField>
+
+#### Respuesta
+
+```typescript
+{
+  success?: string
+  error?: string
+}
+```
+
+#### Ejemplo
+
+```typescript
+import { registerUser } from '@/actions/user'
+import { UserCategory } from '@/types'
+
+const result = await registerUser({
+  firstName: 'Juan',
+  lastName: 'Pérez García',
+  email: 'juan.perez@example.com',
+  phoneNumber: '+51987654321',
+  dateOfBirth: new Date('1995-06-15'),
+  category: UserCategory.TEACHER,
+  dni: '12345678'
+})
+
+if (result.success) {
+  console.log('Usuario registrado exitosamente')
+} else {
+  console.error(result.error)
+}
+```
+
+#### Proceso de registro
+
+La función `registerUser` (definida en `~/workspace/source/actions/user.ts:17-53`):
+
+1. Valida los campos con Zod
+2. Crea el registro en la base de datos
+3. Actualiza los metadatos de Clerk (`onboardingComplete: true`)
+4. Asigna el rol inicial `member`
+
+### Actualizar programa de usuario
+
+`setUserSchedule(schedule: UserSchedule, userId: string)`
+
+Actualiza el programa o horario asignado a un catequista.
+
+<Warning>
+  Requiere rol **ADMIN**
+</Warning>
+
+#### Parámetros
+
+<ParamField body="schedule" type="UserSchedule" required>
+  Nuevo programa. Valores:
+  - `FULL_TIME`: Tiempo completo
+  - `PRIMERA_COMUNION`: Primera comunión
+  - `CONFIRMACION`: Confirmación
+  - `LOGISTICA`: Logística
+  - `SEMILLEROS`: Semilleros
+  - `COORDINADOR`: Coordinador
+</ParamField>
+
+<ParamField body="userId" type="string" required>
+  ID del usuario a actualizar
+</ParamField>
+
+#### Ejemplo
+
+```typescript
+import { setUserSchedule } from '@/actions/user'
+import { UserSchedule } from '@/types'
+
+const result = await setUserSchedule(
+  UserSchedule.CONFIRMACION,
+  'user_2abc123def456'
+)
+
+if (result.success) {
+  console.log('Programa actualizado correctamente')
+}
+```
+
+#### Revalidación de caché
+
+Después de actualizar, se invalida el cache tag `users`:
+
+```typescript
+import { updateTag } from 'next/cache'
+
+updateTag('users')
+```
+
+### Obtener programa de usuario
+
+`fetchUserSchedule(userId: string)`
+
+Obtiene el programa asignado a un usuario específico.
+
+#### Parámetros
+
+<ParamField body="userId" type="string" required>
+  ID del usuario
+</ParamField>
+
+#### Respuesta
+
+```typescript
+{
+  success?: string
+  error?: string
+  data?: UserSchedule
+}
+```
+
+#### Ejemplo
+
+```typescript
+import { fetchUserSchedule } from '@/actions/user'
+
+const result = await fetchUserSchedule('user_2abc123def456')
+
+if (result.success && result.data) {
+  console.log('Programa del usuario:', result.data)
+  // Output: "confirmacion"
+}
+```
+
+## Lookup de DNI
+
+`lookupDni(dni: string)`
+
+Consulta los datos de una persona usando su DNI peruano mediante la API de RENIEC (Registro Nacional de Identificación y Estado Civil).
+
+<Note>
+  Esta función utiliza el servicio externo Decolecta para obtener datos de RENIEC.
+</Note>
+
+### Parámetros
+
+<ParamField body="dni" type="string" required>
+  DNI de 8 dígitos numéricos
+</ParamField>
+
+### Respuesta exitosa
+
+```typescript
+{
+  success: true,
+  data: {
+    firstName: string        // Nombres (en Title Case)
+    lastName: string          // Apellidos completos
+    firstLastName: string     // Apellido paterno
+    secondLastName: string    // Apellido materno
+    fullName: string          // Nombre completo
+    documentNumber: string    // DNI
+  }
+}
+```
+
+### Ejemplo
+
+```typescript
+import { lookupDni } from '@/actions/lookup'
+
+const result = await lookupDni('12345678')
+
+if (result.success && result.data) {
+  console.log('Nombre:', result.data.firstName)
+  console.log('Apellidos:', result.data.lastName)
+  console.log('Nombre completo:', result.data.fullName)
+}
+```
+
+### Validación
+
+```typescript
+// DNI inválido (no 8 dígitos)
+const result = await lookupDni('123')
+// { success: false, error: 'DNI inválido' }
+
+// DNI no numérico
+const result = await lookupDni('abcd1234')
+// { success: false, error: 'DNI inválido' }
+
+// DNI no encontrado en RENIEC
+const result = await lookupDni('99999999')
+// { success: false, error: 'DNI no encontrado' }
+```
+
+### Implementación
+
+Definida en `~/workspace/source/actions/lookup.ts:15-69`:
+
+```typescript
+export async function lookupDni(dni: string) {
+  if (dni.length !== 8 || !/^[0-9]+$/.test(dni)) {
+    return { success: false, error: 'DNI inválido' }
+  }
+
+  const response = await fetch(
+    `https://api.decolecta.com/v1/reniec/dni?numero=${dni}`,
+    {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.DECOLECTA_API_TOKEN}`
+      }
+    }
+  )
+
+  if (!response.ok) {
+    return { success: false, error: 'DNI no encontrado' }
+  }
+
+  const data = await response.json()
+  // Procesa y formatea los datos...
+}
+```
+
+<Warning>
+  Requiere configurar la variable de entorno `DECOLECTA_API_TOKEN`.
+</Warning>
+
+## Estructura de la base de datos
+
+Los usuarios se almacenan con el siguiente esquema (definido en `~/workspace/source/db/schema.ts:65-82`):
+
+```typescript
+export const usersTable = pgTable('users', {
+  id: text().primaryKey(),
+  dni: text(),
+  firstName: text('first_name').notNull(),
+  lastName: text('last_name').notNull(),
+  email: text().notNull().unique(),
+  phoneNumber: text('phone_number').notNull(),
+  dateOfBirth: date('date_of_birth').notNull(),
+  category: userCategoryEnum().notNull(),
+  studentCode: text('student_code'),
+  role: userRoleEnum().default(UserRole.MEMBER).notNull(),
+  schedule: userScheduleEnum().default(UserSchedule.FULL_TIME).notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at')
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+})
+```
+
+### Relaciones
+
+- **attendanceRecords**: Registros de asistencia del usuario
+- **attendanceRecordsRegisteredBy**: Asistencias que este usuario registró
+- **sundayMasses**: Misas dominicales del usuario
+- **sundayMassesVerifiedBy**: Misas que este usuario verificó
+
+### Constraints
+
+- **Email único**: El campo `email` debe ser único en toda la tabla
+- **Primary key**: El `id` es el Clerk user ID
+
+## Categorías de usuario
+
+### Student (Estudiante)
+
+Estudiante activo de catequesis.
+
+- Requiere `studentCode`
+- Asiste a eventos según programa asignado
+- Puede ser promovido a `alumni` al graduarse
+
+### Alumni (Exalumno)
+
+Exalumno que ahora es catequista.
+
+- Mantiene su `studentCode` original
+- Puede tener programas específicos asignados
+- Forma parte del equipo de catequistas
+
+### Teacher (Profesor/Catequista)
+
+Catequista o coordinador.
+
+- No requiere `studentCode`
+- Puede tener rol `admin` o `manager`
+- Responsable de registrar asistencias
+
+## Programas disponibles
+
+Los catequistas pueden ser asignados a diferentes programas:
+
+| Programa | Descripción |
+|----------|-------------|
+| `full-time` | Tiempo completo, asiste a todos los eventos |
+| `primera-comunion` | Especializado en primera comunión |
+| `confirmacion` | Especializado en confirmación |
+| `logistica` | Equipo de logística y apoyo |
+| `semilleros` | Programa de formación inicial |
+| `coordinador` | Coordinador de programa |
+
+El programa determina a qué eventos debe asistir el catequista.

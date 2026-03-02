@@ -1,0 +1,387 @@
+---
+title: Attendance API
+description: Endpoints y server actions para gestionar registros de asistencia de catequistas
+---
+
+## Obtener registros de asistencia
+
+`GET /api/attendance`
+
+Obtiene todos los registros de asistencia o los filtra por evento.
+
+### Autenticación requerida
+
+<Warning>
+  Este endpoint requiere rol de **ADMIN**. Los usuarios con rol `member` recibirán `403 Forbidden`.
+</Warning>
+
+### Parámetros de consulta
+
+<ParamField query="eventId" type="number" optional>
+  ID del evento para filtrar registros de asistencia. Si no se proporciona, devuelve todos los registros.
+</ParamField>
+
+### Respuesta exitosa
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "01930d5e-8f7a-7a3c-9b2f-1234567890ab",
+      "userId": "user_2abc123def456",
+      "eventId": 1,
+      "checkInTime": "2026-03-02T14:30:00.000Z",
+      "status": "A TIEMPO",
+      "registeredBy": "user_admin123",
+      "method": "qr",
+      "createdAt": "2026-03-02T14:30:00.000Z",
+      "updatedAt": "2026-03-02T14:30:00.000Z",
+      "user": {
+        "id": "user_2abc123def456",
+        "firstName": "Juan",
+        "lastName": "Pérez García",
+        "email": "juan.perez@example.com",
+        "category": "teacher",
+        "role": "member"
+      },
+      "registeredByUser": {
+        "id": "user_admin123",
+        "firstName": "María",
+        "lastName": "López"
+      }
+    }
+  ]
+}
+```
+
+### Campos de respuesta
+
+<ResponseField name="success" type="boolean">
+  Indica si la solicitud fue exitosa
+</ResponseField>
+
+<ResponseField name="data" type="array">
+  Array de registros de asistencia con información del usuario
+  
+  <ResponseField name="data[].id" type="string">
+    UUID v7 del registro de asistencia
+  </ResponseField>
+  
+  <ResponseField name="data[].userId" type="string">
+    ID del usuario (Clerk ID)
+  </ResponseField>
+  
+  <ResponseField name="data[].eventId" type="number">
+    ID del evento al que asistió
+  </ResponseField>
+  
+  <ResponseField name="data[].checkInTime" type="string">
+    Timestamp ISO 8601 del registro de entrada
+  </ResponseField>
+  
+  <ResponseField name="data[].status" type="string">
+    Estado de asistencia. Valores posibles:
+    - `A TIEMPO`: Llegó a tiempo
+    - `TARDANZA`: Llegó tarde (primera tardanza)
+    - `DOBLE TARDANZA`: Segunda tardanza o más
+    - `FALTA JUSTIFICADA`: Ausencia justificada
+    - `TARDANZA JUSTIFICADA`: Tardanza justificada
+    - `FALTA INJUSTIFICADA`: Ausencia sin justificar
+  </ResponseField>
+  
+  <ResponseField name="data[].registeredBy" type="string">
+    ID del usuario que registró la asistencia
+  </ResponseField>
+  
+  <ResponseField name="data[].method" type="string">
+    Método de registro. Valores: `manual`, `qr`, `nfc`
+  </ResponseField>
+  
+  <ResponseField name="data[].user" type="object">
+    Información del usuario que asistió
+  </ResponseField>
+  
+  <ResponseField name="data[].registeredByUser" type="object">
+    Información del usuario que registró la asistencia
+  </ResponseField>
+</ResponseField>
+
+### Errores
+
+```json
+// No autenticado
+{
+  "success": false,
+  "error": "Unauthorized"
+}
+
+// Sin permisos de admin
+{
+  "success": false,
+  "error": "Forbidden"
+}
+
+// No se encontraron registros
+{
+  "success": false,
+  "error": "No attendance records found"
+}
+```
+
+### Ejemplo de uso
+
+```typescript
+// Obtener todos los registros
+const response = await fetch('/api/attendance')
+const { success, data } = await response.json()
+
+// Filtrar por evento
+const response = await fetch('/api/attendance?eventId=1')
+const { success, data } = await response.json()
+```
+
+## Server Actions
+
+Las operaciones de escritura se realizan mediante Server Actions en lugar de endpoints de API.
+
+### Registrar asistencia individual
+
+`registerAttendanceRecord(data: InsertAttendance)`
+
+Registra la asistencia de un catequista a un evento.
+
+<Warning>
+  Requiere rol **ADMIN**
+</Warning>
+
+#### Parámetros
+
+<ParamField body="userId" type="string" required>
+  ID del usuario (Clerk ID)
+</ParamField>
+
+<ParamField body="eventId" type="number" required>
+  ID del evento
+</ParamField>
+
+<ParamField body="checkInTime" type="Date" optional>
+  Hora de registro (por defecto: ahora)
+</ParamField>
+
+<ParamField body="status" type="AttendanceStatus" required>
+  Estado de asistencia: `A_TIEMPO`, `TARDANZA`, `DOBLE_TARDANZA`, `FALTA_JUSTIFICADA`, `TARDANZA_JUSTIFICADA`, `FALTA_INJUSTIFICADA`
+</ParamField>
+
+<ParamField body="registeredBy" type="string" required>
+  ID del usuario que registra la asistencia
+</ParamField>
+
+<ParamField body="method" type="AttendanceRecordMethod" optional>
+  Método de registro: `MANUAL`, `QR`, `NFC` (por defecto: `QR`)
+</ParamField>
+
+#### Respuesta
+
+```typescript
+{
+  success?: string
+  warning?: string
+  error?: string
+  lastAttendanceRecord?: FetchAttendanceProps
+}
+```
+
+#### Ejemplo
+
+```typescript
+import { registerAttendanceRecord } from '@/actions/attendance'
+import { AttendanceStatus, AttendanceRecordMethod } from '@/types'
+
+const result = await registerAttendanceRecord({
+  userId: 'user_2abc123def456',
+  eventId: 1,
+  status: AttendanceStatus.A_TIEMPO,
+  registeredBy: 'user_admin123',
+  method: AttendanceRecordMethod.QR
+})
+
+if (result.success) {
+  console.log('Asistencia registrada:', result.lastAttendanceRecord)
+}
+```
+
+### Registrar múltiples asistencias
+
+`registerAttendanceRecords(data: InsertAttendance[])`
+
+Registra múltiples asistencias en una sola operación.
+
+<Warning>
+  Requiere rol **ADMIN**
+</Warning>
+
+#### Ejemplo
+
+```typescript
+import { registerAttendanceRecords } from '@/actions/attendance'
+
+const records = [
+  {
+    userId: 'user_123',
+    eventId: 1,
+    status: AttendanceStatus.A_TIEMPO,
+    registeredBy: 'user_admin',
+    method: AttendanceRecordMethod.MANUAL
+  },
+  {
+    userId: 'user_456',
+    eventId: 1,
+    status: AttendanceStatus.TARDANZA,
+    registeredBy: 'user_admin',
+    method: AttendanceRecordMethod.MANUAL
+  }
+]
+
+const result = await registerAttendanceRecords(records)
+```
+
+### Actualizar estado de asistencia
+
+`setAttendanceRecordStatus(status: AttendanceStatus, recordId: string)`
+
+Modifica el estado de un registro de asistencia existente.
+
+<Warning>
+  Requiere rol **ADMIN**
+</Warning>
+
+#### Parámetros
+
+<ParamField body="status" type="AttendanceStatus" required>
+  Nuevo estado de asistencia
+</ParamField>
+
+<ParamField body="recordId" type="string" required>
+  UUID del registro de asistencia
+</ParamField>
+
+#### Ejemplo
+
+```typescript
+import { setAttendanceRecordStatus } from '@/actions/attendance'
+import { AttendanceStatus } from '@/types'
+
+const result = await setAttendanceRecordStatus(
+  AttendanceStatus.FALTA_JUSTIFICADA,
+  '01930d5e-8f7a-7a3c-9b2f-1234567890ab'
+)
+```
+
+### Rellenar faltas de un evento
+
+`fillAbsenceRecords(eventId: number)`
+
+Crea registros de `FALTA_INJUSTIFICADA` para todos los usuarios que no tienen asistencia registrada en un evento.
+
+<Warning>
+  Requiere rol **ADMIN**. Esta acción es irreversible una vez ejecutada.
+</Warning>
+
+<Note>
+  Útil para cerrar un evento y marcar automáticamente a los ausentes.
+</Note>
+
+#### Parámetros
+
+<ParamField body="eventId" type="number" required>
+  ID del evento para rellenar faltas
+</ParamField>
+
+#### Ejemplo
+
+```typescript
+import { fillAbsenceRecords } from '@/actions/attendance'
+
+const result = await fillAbsenceRecords(1)
+
+if (result.success) {
+  console.log('Faltas rellenadas correctamente')
+}
+```
+
+#### Implementación
+
+Esta función (definida en `~/workspace/source/actions/attendance.ts:120-169`):
+
+1. Verifica que el evento existe
+2. Obtiene usuarios sin registro de asistencia
+3. Crea registros con estado `FALTA_INJUSTIFICADA`
+4. Usa la fecha de fin del evento como `checkInTime`
+
+### Eliminar registro de asistencia
+
+`removeAttendanceRecord(recordId: string)`
+
+Elimina permanentemente un registro de asistencia.
+
+<Warning>
+  Requiere rol **ADMIN**. Esta acción es irreversible.
+</Warning>
+
+#### Parámetros
+
+<ParamField body="recordId" type="string" required>
+  UUID del registro de asistencia a eliminar
+</ParamField>
+
+#### Ejemplo
+
+```typescript
+import { removeAttendanceRecord } from '@/actions/attendance'
+
+const result = await removeAttendanceRecord(
+  '01930d5e-8f7a-7a3c-9b2f-1234567890ab'
+)
+```
+
+## Reglas de negocio
+
+### Unicidad de registros
+
+La base de datos garantiza que un usuario solo puede tener **un registro de asistencia por evento** mediante un índice único:
+
+```typescript
+uniqueIndex('unq_user_event').on(table.userId, table.eventId)
+```
+
+Intentar crear un registro duplicado generará un error de base de datos.
+
+### Estados de asistencia
+
+Los estados se determinan según el horario:
+
+- **A TIEMPO**: Registro dentro del horario de inicio
+- **TARDANZA**: Primera tardanza
+- **DOBLE TARDANZA**: Segunda tardanza o más (acumulativo)
+- **FALTA JUSTIFICADA**: Con justificación previa
+- **TARDANZA JUSTIFICADA**: Tardanza con justificación
+- **FALTA INJUSTIFICADA**: Sin asistencia ni justificación
+
+### Métodos de registro
+
+- **QR**: Escaneo de código QR (método predeterminado)
+- **NFC**: Lectura de tarjeta NFC
+- **MANUAL**: Registro manual por un administrador
+
+## Caché y revalidación
+
+Todas las operaciones de escritura invalidan el cache tag `attendance`:
+
+```typescript
+import { updateTag } from 'next/cache'
+
+updateTag('attendance') // Revalida datos en caché
+```
+
+Esto garantiza que las vistas que muestran asistencias se actualicen automáticamente.

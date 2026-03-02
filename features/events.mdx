@@ -1,0 +1,252 @@
+---
+title: Eventos
+description: Sistema de gestión y participación en eventos de la pastoral
+---
+
+El módulo de eventos permite visualizar, participar y gestionar todas las actividades programadas de la pastoral.
+
+## Tipos de eventos
+
+Los eventos se organizan en dos categorías:
+
+<CardGroup cols={2}>
+  <Card title="Próximos eventos" icon="calendar-days">
+    Eventos programados para fechas futuras o en curso
+  </Card>
+  <Card title="Eventos pasados" icon="calendar-check">
+    Historial de eventos ya finalizados
+  </Card>
+</CardGroup>
+
+## Información del evento
+
+Cada evento contiene:
+
+<ParamField path="id" type="integer" required>
+  Identificador único del evento (generado automáticamente)
+</ParamField>
+
+<ParamField path="name" type="text" required>
+  Nombre descriptivo del evento
+</ParamField>
+
+<ParamField path="description" type="text">
+  Descripción detallada del evento
+</ParamField>
+
+<ParamField path="date" type="timestamp" required>
+  Fecha y hora de inicio del evento
+</ParamField>
+
+<ParamField path="secondTurnDate" type="timestamp" required>
+  Fecha y hora del segundo turno (para eventos con múltiples horarios)
+</ParamField>
+
+<ParamField path="endDate" type="timestamp" required>
+  Fecha y hora de finalización del evento
+</ParamField>
+
+<ParamField path="locationId" type="integer" required>
+  Referencia a la ubicación del evento
+</ParamField>
+
+<ParamField path="createdAt" type="timestamp" required>
+  Fecha de creación del evento
+</ParamField>
+
+<ParamField path="updatedAt" type="timestamp" required>
+  Fecha de última actualización
+</ParamField>
+
+## Información de ubicación
+
+Cada evento está asociado a una ubicación que incluye:
+
+<ParamField path="name" type="text" required>
+  Nombre del lugar
+</ParamField>
+
+<ParamField path="address" type="text" required>
+  Dirección completa
+</ParamField>
+
+<ParamField path="city" type="text" required>
+  Ciudad (por defecto: Trujillo)
+</ParamField>
+
+<ParamField path="postalCode" type="text" required>
+  Código postal
+</ParamField>
+
+<ParamField path="country" type="text" required>
+  País (por defecto: Perú)
+</ParamField>
+
+<ParamField path="googleMapsUrl" type="text" required>
+  Enlace directo a Google Maps para navegación
+</ParamField>
+
+## Visualización de eventos
+
+### Tarjeta de evento
+
+Cada evento se muestra en una tarjeta que incluye:
+
+- **Nombre del evento**: Título principal
+- **Fecha**: Formato completo en español
+- **Horario**: Hora de inicio y finalización
+- **Ubicación**: Nombre del lugar con enlace a Google Maps
+- **Botón de calendario**: Para agregar a Google Calendar
+
+### Indicadores visuales
+
+#### Evento de hoy
+
+- Borde azul
+- Fondo azul claro
+- Resalta eventos que ocurren en la fecha actual
+
+#### Evento en curso
+
+- Borde verde
+- Fondo verde claro
+- Indica que el evento está ocurriendo en este momento
+
+<Info>
+Los eventos en curso muestran "Evento en curso" y no permiten justificación de inasistencia.
+</Info>
+
+## Acciones disponibles
+
+### Para eventos próximos
+
+<Steps>
+  <Step title="Agregar a calendario">
+    Haz clic en el ícono de calendario para añadir el evento a Google Calendar automáticamente
+  </Step>
+  <Step title="Ver ubicación">
+    Haz clic en la dirección para abrir Google Maps y obtener indicaciones
+  </Step>
+  <Step title="Justificar inasistencia">
+    Si no podrás asistir, usa el botón de justificación que abre WhatsApp con un mensaje pre-elaborado
+  </Step>
+  <Step title="Ver estado de asistencia">
+    Consulta si ya registraste tu asistencia al evento
+  </Step>
+</Steps>
+
+### Justificación de inasistencias
+
+El sistema genera automáticamente un mensaje de WhatsApp que incluye:
+
+- Nombre del evento
+- Fecha completa del evento
+- Hora del evento
+- Solicitud de justificación
+
+Se envía al coordinador: +51 941 952 314
+
+<Warning>
+Las justificaciones deben enviarse con anticipación. Los eventos en curso o finalizados no permiten justificación.
+</Warning>
+
+## Integración con Google Calendar
+
+Al hacer clic en agregar a calendario, se genera un enlace con:
+
+- **Título**: Nombre del evento
+- **Fechas**: Inicio y fin en formato UTC
+- **Descripción**: Detalles del evento
+- **Ubicación**: Nombre del lugar
+- **Zona horaria**: America/Lima (Perú)
+
+<Note>
+El evento se abre en Google Calendar web, donde puedes guardarlo en tu calendario personal.
+</Note>
+
+## Registro de asistencia
+
+Para registrar tu asistencia a un evento:
+
+1. Llega al lugar del evento
+2. Muestra tu ID digital con código QR
+3. El administrador escanea tu código
+4. El sistema registra tu asistencia automáticamente
+5. El estado se determina según tu hora de llegada
+
+### Estados posibles
+
+Ver [Asistencia](/features/attendance) para más detalles sobre los estados.
+
+## Gestión de eventos (Administradores)
+
+Los administradores pueden:
+
+- Crear nuevos eventos
+- Editar eventos existentes
+- Definir ubicaciones
+- Registrar asistencias manualmente
+- Ver lista de asistentes
+- Marcar inasistencias
+- Generar reportes
+
+## Relaciones del evento
+
+Cada evento está relacionado con:
+
+- **Ubicación**: Lugar donde se realizará
+- **Registros de asistencia**: Lista de todos los catequistas que asistieron
+- **Usuarios**: Catequistas registrados para el evento
+
+## Índices de rendimiento
+
+La tabla de eventos está optimizada con:
+
+- Índice en `date`: Para ordenar cronológicamente
+- Relación con ubicaciones: Para joins eficientes
+- Auto-incremento de ID: Para identificación única
+
+## Estados del evento
+
+### Próximo
+
+- Fecha de inicio futura
+- Permite registro de asistencia
+- Se puede agregar a calendario
+- Permite justificación de inasistencia
+
+### En curso
+
+- Fecha actual entre inicio y fin
+- Permite registro de asistencia
+- No permite justificación
+- Indicador visual verde
+
+### Finalizado
+
+- Fecha de fin pasada
+- No permite registro de asistencia
+- No permite justificación
+- Movido a "Eventos pasados"
+
+<Info>
+Los eventos pasados permanecen visibles para consultar el historial de asistencias.
+</Info>
+
+## Formato de fechas
+
+Todas las fechas se muestran en:
+
+- **Zona horaria**: America/Lima (Perú)
+- **Idioma**: Español
+- **Formato largo**: "[día] de [mes] de [año]"
+- **Formato de hora**: 12 horas con AM/PM
+
+## Vista de eventos
+
+Los eventos se organizan en:
+
+- **Grid responsive**: Se adapta al tamaño de pantalla
+- **Ordenamiento cronológico**: Más próximos primero
+- **Separación por estado**: Próximos y pasados en secciones diferentes
+- **Carga optimizada**: Con skeletons mientras cargan los datos

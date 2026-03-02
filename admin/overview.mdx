@@ -1,0 +1,80 @@
+---
+title: Visión general de administración
+description: Introducción a las funcionalidades administrativas de Pastoral Digital para gestionar catequistas, eventos y asistencias
+---
+
+## Descripción
+
+El módulo de administración de Pastoral Digital proporciona herramientas completas para gestionar todos los aspectos operativos de tu organización pastoral. Los usuarios con rol `UserRole.ADMIN` tienen acceso a estas funcionalidades avanzadas.
+
+## Funcionalidades principales
+
+<CardGroup cols={2}>
+  <Card title="Gestión de usuarios" icon="users" href="/admin/user-management">
+    Administra catequistas, actualiza programas y visualiza información completa de cada usuario.
+  </Card>
+  
+  <Card title="Gestión de eventos" icon="calendar" href="/admin/event-management">
+    Crea y gestiona eventos con ubicaciones, fechas y turnos para el registro de asistencias.
+  </Card>
+  
+  <Card title="Registros de asistencia" icon="clipboard-check" href="/admin/attendance-records">
+    Visualiza, modifica y registra manualmente asistencias con diferentes métodos y estados.
+  </Card>
+  
+  <Card title="Verificación de misas" icon="church" href="/admin/mass-verification">
+    Revisa y verifica los registros de asistencia a misa dominical con evidencia fotográfica.
+  </Card>
+</CardGroup>
+
+## Roles y permisos
+
+Pastoral Digital utiliza un sistema de roles basado en enumeraciones definidas en el esquema de la base de datos (db/schema.ts:31-34).
+
+### Roles disponibles
+
+<ParamField path="UserRole.MEMBER" type="string" default="member">
+  Usuario catequista estándar con acceso a funcionalidades básicas
+</ParamField>
+
+<ParamField path="UserRole.ADMIN" type="string" default="admin">
+  Administrador con acceso completo a todas las funcionalidades de gestión
+</ParamField>
+
+<Info>
+  La verificación de roles se implementa mediante la función `checkRole()` en todas las acciones administrativas del servidor (actions/user.ts:86, actions/attendance.ts:35, actions/mass.ts:78).
+</Info>
+
+## Navegación del panel de administración
+
+El panel de administración se organiza en las siguientes secciones:
+
+1. **Administrar Catequistas** (`/admin/users`) - Lista completa de usuarios registrados
+2. **Escanear Código QR** (`/admin/scan`) - Registro rápido de asistencia mediante QR
+3. **Registro de Asistencia** (`/admin/records`) - Vista detallada de todos los registros
+4. **Calendario de Asistencia** (`/admin/calendar`) - Visualización cronológica de asistencias
+5. **Administrar Misas** (`/admin/masses`) - Gestión de registros de misa dominical
+6. **Eventos** (`/admin/events/[id]`) - Detalles y asistentes de eventos específicos
+
+## Exportación de datos
+
+Los administradores pueden exportar datos a formato CSV desde:
+
+- **Tabla de usuarios**: Exporta información completa de catequistas
+- **Tabla de misas**: Exporta registros de asistencia a misa dominical
+
+<Tip>
+  Utiliza el componente `RevalidateButton` para actualizar los datos en tiempo real sin recargar la página completa.
+</Tip>
+
+## Próximos pasos
+
+<CardGroup cols={2}>
+  <Card title="Gestión de usuarios" icon="arrow-right" href="/admin/user-management">
+    Aprende a administrar catequistas y asignar programas
+  </Card>
+  
+  <Card title="Gestión de eventos" icon="arrow-right" href="/admin/event-management">
+    Descubre cómo crear y configurar eventos
+  </Card>
+</CardGroup>

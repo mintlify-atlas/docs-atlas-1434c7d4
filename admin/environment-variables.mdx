@@ -1,0 +1,218 @@
+---
+title: Variables de entorno
+description: Lista completa de variables de entorno necesarias para configurar Pastoral Digital
+---
+
+Pastoral Digital utiliza variables de entorno para configurar su comportamiento y conectarse a servicios externos. Todas las variables deben ser definidas en un archivo `.env` en la raíz del proyecto.
+
+<Warning>
+  Nunca compartas tu archivo `.env` ni lo subas a control de versiones. Este archivo contiene información sensible como claves API y tokens de acceso.
+</Warning>
+
+## Estructura del archivo .env
+
+Crea un archivo `.env` en la raíz del proyecto con el siguiente contenido:
+
+```env
+DATABASE_URL=<your-neon-database-url>
+
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=<your-clerk-publishable-key>
+CLERK_SECRET_KEY=<your-clerk-secret-key>
+
+NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL=/dashboard
+NEXT_PUBLIC_CLERK_SIGN_IN_FORCE_REDIRECT_URL=/dashboard
+NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL=/onboarding
+NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL=/onboarding
+
+UPLOADTHING_TOKEN=<your-uploadthing-token>
+
+DECOLECTA_API_TOKEN=<your-decolecta-api-token>
+
+NEXT_PUBLIC_POSTHOG_HOST=<your-posthog-host_url>
+NEXT_PUBLIC_POSTHOG_KEY=<your-posthog-key>
+```
+
+## Variables de base de datos
+
+### DATABASE_URL
+
+**Requerido:** Sí  
+**Servicio:** [Neon](https://neon.tech/)  
+**Descripción:** URL de conexión a la base de datos PostgreSQL
+
+Formato de conexión:
+```
+postgresql://[usuario]:[contraseña]@[host]/[nombre-base-datos]?sslmode=require
+```
+
+**Cómo obtenerla:**
+1. Crea una cuenta en [Neon](https://neon.tech/)
+2. Crea un nuevo proyecto
+3. Copia la cadena de conexión desde el dashboard
+4. Asegúrate de que incluya `?sslmode=require` al final
+
+## Variables de autenticación (Clerk)
+
+Clerk maneja toda la autenticación de usuarios en Pastoral Digital.
+
+### NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+
+**Requerido:** Sí  
+**Servicio:** [Clerk](https://clerk.com/)  
+**Descripción:** Clave pública de Clerk para el cliente
+
+**Cómo obtenerla:**
+1. Crea una cuenta en [Clerk](https://clerk.com/)
+2. Crea una nueva aplicación
+3. Ve a "API Keys" en el dashboard
+4. Copia la "Publishable key"
+
+### CLERK_SECRET_KEY
+
+**Requerido:** Sí  
+**Servicio:** [Clerk](https://clerk.com/)  
+**Descripción:** Clave secreta de Clerk para el servidor
+
+<Warning>
+  Esta clave nunca debe exponerse al cliente. Mantén esta variable privada y no la incluyas en variables con el prefijo `NEXT_PUBLIC_`.
+</Warning>
+
+**Cómo obtenerla:**
+1. En el dashboard de Clerk, ve a "API Keys"
+2. Copia la "Secret key"
+
+### Variables de rutas de Clerk
+
+Estas variables configuran las rutas de autenticación en la aplicación:
+
+| Variable | Valor | Descripción |
+|----------|-------|-------------|
+| `NEXT_PUBLIC_CLERK_SIGN_IN_URL` | `/sign-in` | Ruta para la página de inicio de sesión |
+| `NEXT_PUBLIC_CLERK_SIGN_UP_URL` | `/sign-up` | Ruta para la página de registro |
+| `NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL` | `/dashboard` | Ruta de redirección después de iniciar sesión |
+| `NEXT_PUBLIC_CLERK_SIGN_IN_FORCE_REDIRECT_URL` | `/dashboard` | Ruta forzada después de iniciar sesión |
+| `NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL` | `/onboarding` | Ruta de redirección después de registrarse |
+| `NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL` | `/onboarding` | Ruta forzada después de registrarse |
+
+<Note>
+  Estos valores son los predeterminados y pueden modificarse según tus necesidades. Asegúrate de que las rutas coincidan con las páginas existentes en tu aplicación.
+</Note>
+
+## Variables de almacenamiento (UploadThing)
+
+### UPLOADTHING_TOKEN
+
+**Requerido:** Sí  
+**Servicio:** [UploadThing](https://uploadthing.com/)  
+**Descripción:** Token de autenticación para UploadThing, usado para subir archivos como fotos de perfil y evidencias de misas dominicales
+
+**Cómo obtenerla:**
+1. Crea una cuenta en [UploadThing](https://uploadthing.com/)
+2. Crea una nueva aplicación
+3. Ve a "API Keys" en el dashboard
+4. Copia el token de autenticación
+
+## Variables de consulta de identidad (Decolecta)
+
+### DECOLECTA_API_TOKEN
+
+**Requerido:** Sí  
+**Servicio:** [Decolecta API](https://decolecta.com/)  
+**Descripción:** Token para consultar información de identidad basada en DNI durante el proceso de onboarding
+
+**Cómo obtenerla:**
+1. Contacta con Decolecta para obtener acceso a su API
+2. Solicita un token de autenticación
+3. Configura los permisos necesarios para consulta de DNI
+
+## Variables de analítica (PostHog)
+
+### NEXT_PUBLIC_POSTHOG_HOST
+
+**Requerido:** Sí  
+**Servicio:** [PostHog](https://posthog.com/)  
+**Descripción:** URL del host de PostHog para analítica de eventos
+
+Formato:
+```
+https://app.posthog.com
+```
+
+O si tienes una instancia self-hosted:
+```
+https://tu-instancia.posthog.com
+```
+
+### NEXT_PUBLIC_POSTHOG_KEY
+
+**Requerido:** Sí  
+**Servicio:** [PostHog](https://posthog.com/)  
+**Descripción:** Clave de proyecto de PostHog para identificar tu aplicación
+
+**Cómo obtenerlas:**
+1. Crea una cuenta en [PostHog](https://posthog.com/)
+2. Crea un nuevo proyecto
+3. Ve a "Project Settings"
+4. Copia el "Project API Key" para `NEXT_PUBLIC_POSTHOG_KEY`
+5. Usa `https://app.posthog.com` para `NEXT_PUBLIC_POSTHOG_HOST` (o tu instancia personalizada)
+
+## Variables según el entorno
+
+### Desarrollo
+
+Para desarrollo local, puedes usar URLs locales para las rutas de Clerk:
+
+```env
+NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+```
+
+### Producción
+
+<Warning>
+  En producción en Vercel, asegúrate de configurar todas las variables de entorno en el dashboard del proyecto antes de desplegar.
+</Warning>
+
+Para producción, las rutas de Clerk deben permanecer como rutas relativas, no URLs completas:
+
+```env
+NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+```
+
+## Verificación de configuración
+
+Para verificar que todas las variables están correctamente configuradas:
+
+1. **Base de datos**: Ejecuta `pnpm db:studio` para abrir Drizzle Studio
+2. **Autenticación**: Intenta registrarte en `/sign-up`
+3. **Almacenamiento**: Sube una imagen de perfil
+4. **Analítica**: Verifica que los eventos aparezcan en PostHog
+
+## Solución de problemas
+
+### Error: "DATABASE_URL is not defined"
+
+Asegúrate de que el archivo `.env` esté en la raíz del proyecto y que la variable `DATABASE_URL` esté definida correctamente.
+
+### Error de autenticación con Clerk
+
+Verifica que:
+- Las claves de Clerk sean correctas
+- Las rutas de redirección coincidan con las páginas existentes
+- En producción, las URLs de Clerk estén configuradas en el dashboard de Clerk
+
+### Error de conexión a PostHog
+
+Verifica que:
+- El host de PostHog sea correcto (con `https://`)
+- La clave de proyecto sea válida
+- No haya bloqueadores de anuncios que interfieran con PostHog
+
+## Próximos pasos
+
+- [Configurar la base de datos](/admin/database-setup)
+- [Configurar autenticación](/admin/authentication)
+- [Volver a la configuración inicial](/admin/setup)

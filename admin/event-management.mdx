@@ -1,0 +1,238 @@
+---
+title: Gestión de eventos
+description: Crea y administra eventos con ubicaciones, fechas y turnos para el registro de asistencias en Pastoral Digital
+---
+
+## Descripción
+
+La gestión de eventos permite a los administradores crear, configurar y supervisar eventos de catequesis. Cada evento tiene ubicación, fechas específicas y permite el registro de asistencias de catequistas.
+
+## Estructura de eventos
+
+Los eventos en Pastoral Digital (db/schema.ts:118-137) incluyen:
+
+<ParamField path="id" type="integer" required>
+  Identificador único generado automáticamente (identity)
+</ParamField>
+
+<ParamField path="name" type="string" required>
+  Nombre descriptivo del evento
+</ParamField>
+
+<ParamField path="description" type="string">
+  Descripción detallada del evento (opcional)
+</ParamField>
+
+<ParamField path="date" type="timestamp" required>
+  Fecha y hora de inicio del primer turno
+</ParamField>
+
+<ParamField path="secondTurnDate" type="timestamp" required>
+  Fecha y hora de inicio del segundo turno
+</ParamField>
+
+<ParamField path="endDate" type="timestamp" required>
+  Fecha y hora de finalización del evento
+</ParamField>
+
+<ParamField path="locationId" type="integer" required>
+  Referencia a la ubicación del evento (locationsTable.id)
+</ParamField>
+
+## Visualización de eventos
+
+Para ver los detalles de un evento específico:
+
+<Steps>
+  <Step title="Navega a la lista de eventos">
+    Accede a `/events` para ver todos los eventos programados.
+  </Step>
+  
+  <Step title="Selecciona un evento">
+    Haz clic en un evento para ver su página de detalles en `/admin/events/[id]`.
+  </Step>
+  
+  <Step title="Revisa las métricas">
+    Visualiza las tarjetas de estadísticas con información resumida del evento.
+  </Step>
+  
+  <Step title="Consulta los registros">
+    Revisa la tabla de asistentes con todos los registros de asistencia.
+  </Step>
+</Steps>
+
+## Página de detalles del evento
+
+La página de evento individual (app/(main)/admin/events/[id]/page.tsx:22) muestra:
+
+### Información del encabezado
+
+- **Nombre del evento**: Título principal extraído de `event.name`
+- **Fecha formateada**: Fecha completa en español (formato PPPPpp, locale: es, timezone: America/Lima)
+- **Breadcrumb navigation**: Navegación de contexto (Eventos > Nombre del Evento)
+
+### Tarjetas de métricas
+
+El componente `EventDashboardCards` muestra estadísticas clave del evento:
+
+- Total de asistentes registrados
+- Distribución por estados de asistencia
+- Comparativas de turnos
+- Porcentajes de puntualidad
+
+### Tabla de asistentes
+
+El componente `EventAttendeesTable` lista todos los catequistas que registraron asistencia al evento con:
+
+- Nombre completo del catequista
+- Hora de check-in
+- Estado de asistencia
+- Método de registro (QR/NFC/Manual)
+- Usuario que registró la asistencia
+
+## Ubicaciones de eventos
+
+Cada evento está vinculado a una ubicación (db/schema.ts:139-152) con los siguientes campos:
+
+<ParamField path="id" type="integer" required>
+  Identificador único de la ubicación
+</ParamField>
+
+<ParamField path="name" type="string" required>
+  Nombre de la ubicación
+</ParamField>
+
+<ParamField path="address" type="string" required>
+  Dirección completa
+</ParamField>
+
+<ParamField path="city" type="string" default="Trujillo">
+  Ciudad (por defecto: Trujillo)
+</ParamField>
+
+<ParamField path="postalCode" type="string" required>
+  Código postal
+</ParamField>
+
+<ParamField path="country" type="string" default="Perú">
+  País (por defecto: Perú)
+</ParamField>
+
+<ParamField path="googleMapsUrl" type="string" required>
+  URL de Google Maps para ubicación exacta
+</ParamField>
+
+## Sistema de turnos
+
+Cada evento maneja dos turnos para acomodar diferentes horarios:
+
+### Primer turno
+
+- **Campo**: `date`
+- **Uso**: Hora de inicio del primer turno
+- **Consideración**: Los registros de asistencia antes de `secondTurnDate` se asignan a este turno
+
+### Segundo turno
+
+- **Campo**: `secondTurnDate`
+- **Uso**: Hora de inicio del segundo turno
+- **Consideración**: Los registros entre `secondTurnDate` y `endDate` se asignan a este turno
+
+<Info>
+  El sistema calcula automáticamente el estado de asistencia (A TIEMPO, TARDANZA, etc.) basándose en la diferencia entre la hora de check-in y las fechas de los turnos.
+</Info>
+
+## Acciones del evento
+
+Desde la página del evento, los administradores pueden:
+
+### Exportar registros
+
+Descarga los datos de asistencia del evento en formato CSV para análisis externo.
+
+### Rellenar faltas
+
+Utiliza la función `fillAbsenceRecords()` (actions/attendance.ts:120) para crear automáticamente registros de falta injustificada para catequistas que no asistieron:
+
+```typescript
+export const fillAbsenceRecords = async (eventId: number) => {
+  if (!(await checkRole(UserRole.ADMIN))) {
+    return { error: 'No estas autorizado para modificar asistencias.' }
+  }
+
+  const event = await getEventById(eventId)
+  const absentUsers = await getUsersWithNoAttendanceRecord(eventId)
+
+  if (!absentUsers.length) {
+    return { error: 'No hay usuarios sin registro para relenar faltas.' }
+  }
+
+  const absenceRecords = absentUsers.map((user) => ({
+    userId: user.id,
+    eventId,
+    checkInTime: new Date(event.endDate),
+    status: AttendanceStatus.FALTA_INJUSTIFICADA,
+    registeredBy: registeredBy || '',
+    method: AttendanceRecordMethod.MANUAL,
+  }))
+
+  await createAttendanceRecords(absenceRecords)
+}
+```
+
+<Steps>
+  <Step title="Verifica que el evento haya finalizado">
+    Asegúrate de que la fecha `endDate` del evento ya haya pasado.
+  </Step>
+  
+  <Step title="Haz clic en 'Rellenar faltas'">
+    El sistema identifica catequistas sin registro de asistencia.
+  </Step>
+  
+  <Step title="Confirma la acción">
+    Se crean registros automáticos con estado `FALTA_INJUSTIFICADA`.
+  </Step>
+</Steps>
+
+### Revalidar datos
+
+Actualiza las métricas y tabla de asistentes sin recargar la página completa.
+
+## Relaciones de datos
+
+Los eventos tienen las siguientes relaciones (db/schema.ts:223-231):
+
+```typescript
+eventsRelations = {
+  attendanceRecords: many(attendanceRecordsTable),
+  location: one(locationsTable, {
+    fields: [eventsTable.locationId],
+    references: [locationsTable.id],
+  }),
+}
+```
+
+- **attendanceRecords**: Uno a muchos con registros de asistencia
+- **location**: Muchos a uno con tabla de ubicaciones
+
+<Warning>
+  La eliminación de un evento mediante `onDelete: 'cascade'` también eliminará todos los registros de asistencia asociados. Realiza esta acción con precaución.
+</Warning>
+
+## Formato de fechas
+
+Todas las fechas de eventos se manejan con:
+
+- **Zona horaria**: America/Lima (Perú)
+- **Locale**: es (español)
+- **Biblioteca**: date-fns con extensión @date-fns/tz
+
+Ejemplo de formato (app/(main)/admin/events/[id]/page.tsx:54):
+
+```typescript
+format(new Date(event.date), 'PPPPpp', {
+  locale: es,
+  in: tz('America/Lima'),
+})
+// Resultado: "viernes, 15 de marzo de 2024, 03:00:00 p.m."
+```

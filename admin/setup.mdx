@@ -1,0 +1,155 @@
+---
+title: Configuración inicial
+description: Guía paso a paso para configurar y desplegar Pastoral Digital
+---
+
+Esta guía te ayudará a configurar y desplegar Pastoral Digital desde cero. Pastoral Digital es una aplicación web PWA (Progressive Web App) construida con Next.js 16 que permite a los catequistas acceder a su perfil digital, registrar asistencias y visualizar su información personal.
+
+## Prerequisitos
+
+Antes de comenzar, asegúrate de tener acceso a los siguientes servicios:
+
+- **[Neon](https://neon.tech/)** - Base de datos PostgreSQL serverless
+- **[Clerk](https://clerk.com/)** - Sistema de autenticación
+- **[UploadThing](https://uploadthing.com/)** - Almacenamiento de archivos
+- **[Decolecta API](https://decolecta.com/)** - API para consulta de identidad (DNI)
+- **[PostHog](https://posthog.com/)** - Analítica de eventos
+- **[Vercel](https://vercel.com/)** - Plataforma de despliegue (recomendado)
+
+También necesitarás:
+
+- Node.js 18 o superior
+- pnpm instalado globalmente
+- Git para clonar el repositorio
+
+## Instalación local
+
+<Steps>
+  <Step title="Clonar el repositorio">
+    Clona el repositorio de Pastoral Digital en tu máquina local:
+
+    ```bash
+    git clone https://github.com/jpxoi/pastoral-digital-app.git
+    cd pastoral-digital-app
+    ```
+  </Step>
+
+  <Step title="Instalar dependencias">
+    Instala todas las dependencias del proyecto usando pnpm:
+
+    <CodeGroup>
+      ```bash pnpm
+      pnpm install
+      ```
+
+      ```bash npm
+      npm install
+      ```
+
+      ```bash yarn
+      yarn install
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Configurar variables de entorno">
+    Crea un archivo `.env` en la raíz del proyecto con todas las variables necesarias. Consulta la página de [Variables de entorno](/admin/environment-variables) para obtener la lista completa.
+
+    ```bash
+    cp .env.example .env
+    ```
+
+    <Warning>
+      No compartas tu archivo `.env` ni lo subas a control de versiones. Este archivo contiene información sensible como claves API y tokens de acceso.
+    </Warning>
+  </Step>
+
+  <Step title="Configurar la base de datos">
+    Genera y ejecuta las migraciones de la base de datos:
+
+    ```bash
+    pnpm db:generate
+    pnpm db:migrate
+    ```
+
+    Consulta la página de [Configuración de base de datos](/admin/database-setup) para más detalles.
+  </Step>
+
+  <Step title="Iniciar el servidor de desarrollo">
+    Ejecuta el servidor de desarrollo local:
+
+    ```bash
+    pnpm dev
+    ```
+
+    La aplicación estará disponible en `http://localhost:3000`.
+  </Step>
+</Steps>
+
+## Despliegue en producción
+
+### Opción 1: Despliegue manual
+
+Para desplegar la aplicación en cualquier servidor con Node.js:
+
+<Steps>
+  <Step title="Compilar la aplicación">
+    ```bash
+    pnpm build
+    ```
+  </Step>
+
+  <Step title="Iniciar el servidor de producción">
+    ```bash
+    pnpm start
+    ```
+  </Step>
+</Steps>
+
+### Opción 2: Despliegue en Vercel (recomendado)
+
+Vercel es la plataforma recomendada para desplegar aplicaciones Next.js:
+
+<Steps>
+  <Step title="Crear cuenta en Vercel">
+    Ingresa a [vercel.com](https://vercel.com/) y crea una cuenta si aún no tienes una.
+  </Step>
+
+  <Step title="Importar el repositorio">
+    1. Haz clic en "Add New Project"
+    2. Selecciona "Import Git Repository"
+    3. Autoriza a Vercel para acceder a tu repositorio de GitHub
+    4. Selecciona el repositorio `pastoral-digital-app`
+  </Step>
+
+  <Step title="Configurar variables de entorno">
+    En la configuración del proyecto, agrega todas las variables de entorno necesarias. Puedes copiarlas desde tu archivo `.env` local.
+
+    <Warning>
+      Asegúrate de que las URLs de Clerk (como `NEXT_PUBLIC_CLERK_SIGN_IN_URL`) apunten al dominio de producción correcto.
+    </Warning>
+  </Step>
+
+  <Step title="Desplegar">
+    Haz clic en "Deploy" y espera a que Vercel compile y despliegue tu aplicación.
+  </Step>
+</Steps>
+
+## Verificación de la instalación
+
+Después de completar la configuración:
+
+1. **Verifica la autenticación**: Intenta registrarte y acceder con Clerk
+2. **Prueba la base de datos**: Verifica que los datos se guarden correctamente
+3. **Comprueba el almacenamiento**: Sube una imagen de perfil usando UploadThing
+4. **Revisa la analítica**: Confirma que los eventos se registren en PostHog
+
+## Próximos pasos
+
+- [Configurar autenticación con Clerk](/admin/authentication)
+- [Configurar la base de datos](/admin/database-setup)
+- [Revisar las variables de entorno](/admin/environment-variables)
+
+## Soporte
+
+¿Necesitas ayuda? Contacta al equipo de desarrollo en [pastoral@ps.edu.pe](mailto:pastoral@ps.edu.pe) con el asunto "Pastoral Digital App".

@@ -1,0 +1,177 @@
+---
+title: Asistencia
+description: Sistema de registro y seguimiento de asistencia a eventos con múltiples estados
+---
+
+El sistema de asistencia permite registrar y gestionar la presencia de los catequistas en todos los eventos de la pastoral.
+
+## Métodos de registro
+
+Existen tres formas de registrar la asistencia:
+
+<CardGroup cols={3}>
+  <Card title="Código QR" icon="qrcode">
+    Escaneo del código QR del ID digital (método predeterminado)
+  </Card>
+  <Card title="Manual" icon="hand">
+    Registro manual por parte del administrador
+  </Card>
+  <Card title="NFC" icon="wifi">
+    Registro por proximidad mediante tecnología NFC
+  </Card>
+</CardGroup>
+
+## Estados de asistencia
+
+El sistema maneja seis estados diferentes de asistencia:
+
+### A TIEMPO
+
+El catequista llegó dentro del horario establecido.
+
+<ParamField path="status" type="enum">
+  `A TIEMPO`
+</ParamField>
+
+### TARDANZA
+
+Llegada después de la hora de inicio pero dentro del margen de tolerancia.
+
+<ParamField path="status" type="enum">
+  `TARDANZA`
+</ParamField>
+
+### DOBLE TARDANZA
+
+Llegada con retraso significativo que excede el margen de tolerancia.
+
+<ParamField path="status" type="enum">
+  `DOBLE TARDANZA`
+</ParamField>
+
+### FALTA JUSTIFICADA
+
+Ausencia previamente comunicada y aprobada por coordinación.
+
+<ParamField path="status" type="enum">
+  `FALTA JUSTIFICADA`
+</ParamField>
+
+### TARDANZA JUSTIFICADA
+
+Llegada tarde con justificación válida aprobada.
+
+<ParamField path="status" type="enum">
+  `TARDANZA JUSTIFICADA`
+</ParamField>
+
+### FALTA INJUSTIFICADA
+
+Ausencia sin justificación o con justificación rechazada.
+
+<ParamField path="status" type="enum">
+  `FALTA INJUSTIFICADA`
+</ParamField>
+
+<Warning>
+Las faltas injustificadas afectan tu registro de participación. Asegúrate de justificar tus inasistencias con anticipación.
+</Warning>
+
+## Estructura del registro de asistencia
+
+Cada registro de asistencia contiene la siguiente información:
+
+<ParamField path="id" type="uuid" required>
+  Identificador único del registro (generado con UUID v7)
+</ParamField>
+
+<ParamField path="userId" type="text" required>
+  ID del usuario que registró asistencia
+</ParamField>
+
+<ParamField path="eventId" type="integer" required>
+  ID del evento al que se asistió
+</ParamField>
+
+<ParamField path="checkInTime" type="timestamp" required>
+  Fecha y hora exacta del registro de entrada
+</ParamField>
+
+<ParamField path="status" type="enum" required>
+  Estado de la asistencia (por defecto: A TIEMPO)
+</ParamField>
+
+<ParamField path="registeredBy" type="text" required>
+  ID del administrador que registró la asistencia
+</ParamField>
+
+<ParamField path="method" type="enum" required>
+  Método usado para el registro (por defecto: QR)
+  - `qr`: Escaneo de código QR
+  - `manual`: Registro manual
+  - `nfc`: Escaneo por NFC
+</ParamField>
+
+<ParamField path="createdAt" type="timestamp" required>
+  Fecha de creación del registro
+</ParamField>
+
+<ParamField path="updatedAt" type="timestamp" required>
+  Fecha de última actualización
+</ParamField>
+
+## Visualización de asistencias
+
+En el dashboard principal, puedes ver:
+
+- **Tabla de asistencias**: Lista completa de tus registros de asistencia
+- **Nombre del evento**: Evento al que asististe
+- **Fecha y hora**: Momento exacto del registro
+- **Estado**: Etiqueta visual con el estado de asistencia
+
+<Info>
+Cada usuario solo puede registrar una asistencia por evento. El sistema previene duplicados mediante una restricción de unicidad en la base de datos.
+</Info>
+
+## Proceso de registro
+
+<Steps>
+  <Step title="Llegada al evento">
+    Dirígete al punto de registro de asistencia
+  </Step>
+  <Step title="Presentación del ID">
+    Muestra tu ID digital con el código QR
+  </Step>
+  <Step title="Escaneo">
+    El administrador escanea tu código QR
+  </Step>
+  <Step title="Confirmación">
+    El sistema determina automáticamente el estado según la hora de llegada
+  </Step>
+  <Step title="Registro guardado">
+    Tu asistencia queda registrada en la base de datos
+  </Step>
+</Steps>
+
+## Justificación de inasistencias
+
+Para justificar una inasistencia:
+
+1. Accede a la sección de eventos
+2. Localiza el evento al que no podrás asistir
+3. Haz clic en "Justificar Inasistencia"
+4. Se abrirá WhatsApp con un mensaje pre-elaborado
+5. Envía tu justificación al coordinador
+
+<Note>
+Las justificaciones deben enviarse con anticipación. El coordinador evaluará y aprobará o rechazará la solicitud.
+</Note>
+
+## Índices de rendimiento
+
+La tabla de asistencias está optimizada con índices en:
+
+- `userId`: Para consultas rápidas por usuario
+- `eventId`: Para consultas por evento
+- `status`: Para filtrado por estado de asistencia
+- Combinación `userId + eventId`: Para garantizar unicidad

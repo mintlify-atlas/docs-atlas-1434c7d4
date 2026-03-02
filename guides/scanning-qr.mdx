@@ -1,0 +1,181 @@
+---
+title: Escanear códigos QR
+description: Cómo escanear códigos QR para registrar asistencias (para administradores)
+---
+
+<Note>
+  Esta función solo está disponible para usuarios con permisos de administrador.
+</Note>
+
+El escaneo de códigos QR permite a los administradores registrar rápidamente la asistencia de los catequistas a eventos programados.
+
+## Acceder al escáner QR
+
+<Steps>
+  <Step title="Abrir la barra lateral">
+    En dispositivos móviles, toca el icono de menú para abrir la barra lateral.
+  </Step>
+  
+  <Step title="Navegar a Escanear QR">
+    En la sección administrativa de la barra lateral, selecciona **Escanear QR**.
+  </Step>
+  
+  <Step title="Verificar el evento del día">
+    En la parte superior de la página verás información del evento programado para hoy:
+    - Nombre del evento
+    - Fecha y hora
+    - Badge "Evento del día"
+  </Step>
+</Steps>
+
+<Warning>
+  Si no hay un evento programado para el día actual, no podrás escanear códigos QR. El sistema mostrará "No se encontró ningún evento" y el escáner estará deshabilitado.
+</Warning>
+
+## Configurar permisos de cámara
+
+Antes de usar el escáner por primera vez, necesitas otorgar permisos de cámara.
+
+<Steps>
+  <Step title="Solicitud de permiso">
+    La primera vez que accedas, el navegador te pedirá permiso para usar la cámara.
+  </Step>
+  
+  <Step title="Permitir acceso">
+    Haz clic en **Permitir** o **Allow** para otorgar el permiso.
+  </Step>
+  
+  <Step title="Verificar estado">
+    Si ves el mensaje "Acceso a la cámara denegado", ve a la configuración de tu navegador y habilita el acceso a la cámara para este sitio.
+  </Step>
+</Steps>
+
+## Usar el escáner
+
+<Steps>
+  <Step title="Iniciar el escáner">
+    Haz clic en el botón **Iniciar escáner** en el centro de la pantalla.
+  </Step>
+  
+  <Step title="Posicionar la cámara">
+    La cámara se activará mostrando la vista en tiempo real. Apunta la cámara hacia el código QR del catequista.
+  </Step>
+  
+  <Step title="Escaneo automático">
+    El sistema detectará y escaneará automáticamente el código QR cuando esté enfocado correctamente.
+  </Step>
+  
+  <Step title="Esperar confirmación">
+    El sistema procesará el código y mostrará una notificación con el resultado del registro.
+  </Step>
+</Steps>
+
+### Controles del escáner
+
+Durante el escaneo, tienes dos controles disponibles:
+
+- **Pausar/Reanudar**: Detiene temporalmente el escáner sin cerrarlo
+- **Reiniciar**: Reinicia completamente la cámara (útil si hay problemas técnicos)
+
+<Tip>
+  El botón cambia entre "Pausar" y "Reanudar" dependiendo del estado actual del escáner.
+</Tip>
+
+## Interpretación de resultados
+
+El sistema proporciona retroalimentación visual y sonora:
+
+### Retroalimentación visual
+
+- **Pantalla verde**: Registro exitoso
+- **Pantalla amarilla**: Advertencia (asistencia ya registrada)
+- **Pantalla roja**: Error en el registro
+
+### Retroalimentación sonora
+
+Cada tipo de resultado reproduce un sonido diferente:
+- Sonido de éxito para registros correctos
+- Sonido de advertencia para duplicados
+- Sonido de error para fallos
+
+### Notificaciones toast
+
+Además de la retroalimentación visual, aparecerán mensajes emergentes (toast) con información detallada:
+
+- **Éxito**: "Asistencia registrada correctamente"
+- **Advertencia**: "Esta asistencia ya fue registrada anteriormente"
+- **Error**: Mensaje específico del error (usuario no encontrado, evento finalizado, etc.)
+
+## Panel de registros recientes
+
+En el lado derecho de la pantalla verás los últimos códigos QR escaneados:
+
+- **Nombre del catequista**: Nombre completo de la persona registrada
+- **Hora de registro**: Fecha y hora exacta del check-in
+- **Estado**: Badge indicando el estado (A tiempo, Tardanza, etc.)
+
+<Note>
+  Los registros recientes se muestran solo durante la sesión actual y desaparecen al cerrar la página.
+</Note>
+
+## Cálculo del estado de asistencia
+
+El sistema calcula automáticamente el estado basándose en la hora de llegada:
+
+- **A tiempo**: Llegada dentro del horario programado
+- **Tardanza**: Llegada después del horario pero dentro del margen permitido
+- **Ausente**: No registrado o llegada muy tardía
+
+El estado específico depende del horario del catequista:
+- Catequistas de primer turno usan la fecha del evento principal
+- Catequistas de segundo turno usan la fecha del segundo turno del evento
+
+## Solución de problemas comunes
+
+### El escáner no inicia
+
+<Steps>
+  <Step title="Verificar evento">
+    Asegúrate de que hay un evento programado para hoy.
+  </Step>
+  
+  <Step title="Revisar permisos">
+    Confirma que los permisos de cámara están habilitados en tu navegador.
+  </Step>
+  
+  <Step title="Recargar página">
+    Intenta recargar la página y volver a intentar.
+  </Step>
+</Steps>
+
+### El código QR no se escanea
+
+- **Iluminación**: Asegúrate de tener buena iluminación
+- **Enfoque**: Acerca o aleja el código QR hasta que esté enfocado
+- **Calidad**: Verifica que el código QR no esté dañado o borroso
+- **Reiniciar**: Usa el botón **Reiniciar** para refrescar la cámara
+
+### Errores de registro
+
+<Warning>
+  Si recibes el error "No puedes registrar asistencia después de la hora de finalización del evento", significa que el evento ya terminó y no se permiten más registros.
+</Warning>
+
+Otros errores comunes:
+- **Usuario no encontrado**: El código QR no corresponde a un usuario válido
+- **Error de horario**: El catequista no tiene asignado un horario en el sistema
+- **Error de conexión**: No hay conexión a internet disponible
+
+## Recomendaciones de uso
+
+<Tip>
+  Para agilizar el proceso de registro:
+  - Mantén el escáner iniciado durante todo el evento
+  - Usa el botón "Pausar" si necesitas un descanso temporal
+  - Posiciona la tableta o dispositivo en un lugar fijo con buena iluminación
+  - Pide a los catequistas que tengan su Pastoral ID listo antes de acercarse
+</Tip>
+
+## Privacidad y seguridad
+
+La cámara solo se activa cuando el escáner está en uso y se desactiva al pausar o cerrar la página. No se graban ni almacenan imágenes o videos.

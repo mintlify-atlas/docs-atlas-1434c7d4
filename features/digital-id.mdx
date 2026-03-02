@@ -1,0 +1,107 @@
+---
+title: ID digital
+description: Tarjeta de identificación digital con código QR para registro de asistencia
+---
+
+El ID digital es la tarjeta de identificación personalizada de cada catequista que incluye un código QR único para facilitar el registro de asistencia.
+
+## Características principales
+
+La tarjeta digital incluye:
+
+- **Código QR único**: Cada usuario tiene un código QR generado a partir de su ID de usuario
+- **Información personal**: Nombre completo del catequista
+- **Categoría**: Tipo de catequista según su horario (Catequista, Coordinador, Mini Catequista, etc.)
+- **ID de usuario**: Identificador único visible debajo del código QR
+
+<Note>
+El código QR se genera dinámicamente usando QuickChart API y contiene el ID del usuario para verificación de asistencia.
+</Note>
+
+## Cómo acceder a tu ID digital
+
+1. Ingresa al dashboard principal
+2. Haz clic en el botón "Ver ID Digital" en la parte superior
+3. Se mostrará tu tarjeta digital en pantalla completa
+
+## Categorías de catequistas
+
+El sistema identifica diferentes tipos de catequistas según su horario:
+
+<CardGroup cols={2}>
+  <Card title="Catequista" icon="user">
+    Horario completo (full-time)
+  </Card>
+  <Card title="Catequista de Confirmación" icon="cross">
+    Especializado en preparación para confirmación
+  </Card>
+  <Card title="Catequista de Primera Comunión" icon="bread-slice">
+    Especializado en preparación para primera comunión
+  </Card>
+  <Card title="Mini Catequista" icon="seedling">
+    Programa de semilleros para nuevos catequistas
+  </Card>
+  <Card title="Coordinador" icon="users">
+    Responsable de coordinación de actividades
+  </Card>
+  <Card title="Logística" icon="truck">
+    Encargado de aspectos logísticos
+  </Card>
+</CardGroup>
+
+## Estructura de datos
+
+La información del ID digital proviene de la tabla de usuarios:
+
+<ParamField path="id" type="text" required>
+  Identificador único del usuario (usado para generar el QR)
+</ParamField>
+
+<ParamField path="firstName" type="text" required>
+  Nombre del catequista
+</ParamField>
+
+<ParamField path="lastName" type="text" required>
+  Apellido del catequista
+</ParamField>
+
+<ParamField path="schedule" type="enum" required>
+  Tipo de horario del catequista. Valores posibles:
+  - `full-time`: Catequista
+  - `confirmacion`: Catequista de Confirmación
+  - `primera-comunion`: Catequista de Primera Comunión
+  - `semilleros`: Mini Catequista
+  - `coordinador`: Coordinador
+  - `logistica`: Logística
+</ParamField>
+
+## Uso del código QR
+
+<Steps>
+  <Step title="Muestra tu código QR">
+    Abre tu ID digital desde el dashboard
+  </Step>
+  <Step title="Escaneo del código">
+    El administrador escanea el código QR con la aplicación
+  </Step>
+  <Step title="Registro automático">
+    El sistema registra tu asistencia con el estado correspondiente según la hora
+  </Step>
+</Steps>
+
+<Info>
+El código QR es generado con nivel de corrección de errores bajo (ecLevel=L) para optimizar el tamaño y velocidad de escaneo.
+</Info>
+
+## Diseño visual
+
+La tarjeta digital presenta:
+
+- Fondo personalizado con diseño de la pastoral
+- Código QR centrado con bordes redondeados
+- Formato de aspecto 9:11 (similar a una tarjeta física)
+- Diseño responsive que se adapta a diferentes pantallas
+
+<Warning>
+Mantén tu ID digital accesible para registrar tu asistencia rápidamente en cada evento.
+</Warning>

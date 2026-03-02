@@ -1,0 +1,206 @@
+---
+title: Misas dominicales
+description: Sistema de registro y verificación de asistencia a misa los domingos
+---
+
+El registro de misas dominicales permite a los catequistas reportar su asistencia a misa cada domingo mediante evidencia fotográfica.
+
+## Características principales
+
+El sistema de misas dominicales incluye:
+
+- **Registro semanal**: Posibilidad de registrar una misa por domingo
+- **Evidencia fotográfica**: Carga de imagen como comprobante
+- **Verificación administrativa**: Proceso de aprobación por coordinadores
+- **Optimización automática**: Compresión de imágenes antes de subir
+- **Prevención de duplicados**: No se puede registrar dos veces el mismo domingo
+
+## Proceso de registro
+
+<Steps>
+  <Step title="Acceder al formulario">
+    Desde el dashboard, haz clic en "Registrar Misa Dominical"
+  </Step>
+  <Step title="Ingresar parroquia">
+    Escribe el nombre de la parroquia donde asististe a misa
+  </Step>
+  <Step title="Subir evidencia">
+    Selecciona una foto del boletín o del interior de la iglesia
+  </Step>
+  <Step title="Optimización automática">
+    El sistema comprime la imagen localmente antes de subirla
+  </Step>
+  <Step title="Enviar registro">
+    Haz clic en "Registrar Misa" para completar el proceso
+  </Step>
+  <Step title="Esperar verificación">
+    Un administrador revisará y verificará tu registro
+  </Step>
+</Steps>
+
+<Info>
+Las imágenes se optimizan automáticamente en tu dispositivo antes de subirse al servidor, ahorrando datos y tiempo de carga.
+</Info>
+
+## Estructura del registro
+
+Cada registro de misa dominical contiene:
+
+<ParamField path="id" type="uuid" required>
+  Identificador único del registro (generado con UUID v7)
+</ParamField>
+
+<ParamField path="userId" type="text" required>
+  ID del catequista que registra la misa
+</ParamField>
+
+<ParamField path="parish" type="text" required>
+  Nombre de la parroquia (mínimo 3, máximo 45 caracteres)
+</ParamField>
+
+<ParamField path="sundayDate" type="date" required>
+  Fecha del domingo (se registra automáticamente al crear el registro)
+</ParamField>
+
+<ParamField path="evidenceFileKey" type="text" required>
+  Clave única del archivo de evidencia en el almacenamiento
+</ParamField>
+
+<ParamField path="evidenceFileHash" type="text" required>
+  Hash del archivo para verificar integridad y prevenir duplicados
+</ParamField>
+
+<ParamField path="verified" type="boolean" required>
+  Estado de verificación (por defecto: false)
+</ParamField>
+
+<ParamField path="verifiedBy" type="text">
+  ID del administrador que verificó el registro
+</ParamField>
+
+<ParamField path="verifiedAt" type="timestamp">
+  Fecha y hora de la verificación
+</ParamField>
+
+<ParamField path="createdAt" type="timestamp" required>
+  Fecha de creación del registro
+</ParamField>
+
+<ParamField path="updatedAt" type="timestamp" required>
+  Fecha de última actualización
+</ParamField>
+
+## Requisitos de la evidencia
+
+La imagen de evidencia debe cumplir:
+
+### Formato aceptado
+
+- Archivos de imagen (JPEG, PNG, HEIC, HEIF)
+- Tamaño máximo: 4MB
+- Conversión automática de HEIC/HEIF a JPEG
+
+### Optimización automática
+
+El sistema aplica:
+
+- **Compresión inteligente**: Reduce el tamaño hasta 1MB máximo
+- **Redimensionamiento**: Máximo 1920px de ancho/alto
+- **Procesamiento local**: Usa Web Workers para no bloquear la interfaz
+- **Indicador de progreso**: Muestra el avance de la optimización
+
+<Warning>
+Solo se aceptan imágenes. Otros tipos de archivo serán rechazados automáticamente.
+</Warning>
+
+## Estados del registro
+
+### Pendiente de verificación
+
+- Estado: `verified: false`
+- El registro ha sido creado pero aún no revisado
+- Visible en la tabla con etiqueta de "Pendiente"
+
+### Verificado
+
+- Estado: `verified: true`
+- Un administrador ha revisado y aprobado la evidencia
+- Se registra quién verificó y cuándo
+- Visible en la tabla con etiqueta de "Verificado"
+
+## Tabla de registros
+
+En el dashboard puedes ver:
+
+- **Fecha del domingo**: Cuándo asististe a misa
+- **Parroquia**: Dónde fue la misa
+- **Estado**: Si está verificado o pendiente
+- **Evidencia**: Miniatura de la imagen subida
+
+## Validaciones del sistema
+
+### Unicidad por fecha
+
+No puedes registrar dos misas en el mismo domingo:
+
+- Restricción de base de datos: `userId + sundayDate` debe ser único
+- Si intentas registrar una misa duplicada, el sistema te alertará
+
+### Integridad de archivos
+
+Cada archivo tiene un hash único:
+
+- Previene duplicados exactos
+- Garantiza que la evidencia no fue modificada
+- Permite verificar la autenticidad del archivo
+
+<Note>
+Si necesitas corregir un registro, contacta a un administrador para eliminar el registro duplicado.
+</Note>
+
+## Proceso de verificación (Administradores)
+
+Los administradores pueden:
+
+1. Ver todos los registros pendientes de verificación
+2. Revisar la evidencia fotográfica
+3. Aprobar registros válidos
+4. Rechazar o solicitar correcciones si es necesario
+
+## Índices de rendimiento
+
+La tabla está optimizada con índices en:
+
+- `userId`: Para consultas rápidas por usuario
+- `verified`: Para filtrar registros pendientes
+- Combinación `userId + sundayDate`: Para garantizar unicidad
+
+## Gestión de archivos
+
+El sistema maneja los archivos de evidencia mediante:
+
+- **UploadThing**: Servicio de almacenamiento de archivos
+- **Eliminación automática**: Los archivos se borran si cancelas la subida
+- **Claves únicas**: Cada archivo tiene una clave única
+- **Hash de verificación**: Garantiza integridad del archivo
+
+<Info>
+Si eliminas una evidencia antes de enviar el formulario, el archivo se borra automáticamente del almacenamiento para no desperdiciar espacio.
+</Info>
+
+## Buenas prácticas
+
+<CardGroup cols={2}>
+  <Card title="Foto clara" icon="camera">
+    Toma una foto nítida del boletín o interior de la iglesia
+  </Card>
+  <Card title="Registro oportuno" icon="clock">
+    Registra tu misa el mismo domingo o durante la semana
+  </Card>
+  <Card title="Nombre completo" icon="church">
+    Escribe el nombre completo de la parroquia
+  </Card>
+  <Card title="Conexión estable" icon="wifi">
+    Asegúrate de tener buena conexión al subir la evidencia
+  </Card>
+</CardGroup>

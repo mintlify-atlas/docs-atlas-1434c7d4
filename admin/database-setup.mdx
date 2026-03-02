@@ -1,0 +1,359 @@
+---
+title: Configuración de base de datos
+description: Configurar PostgreSQL con Drizzle ORM y ejecutar migraciones
+---
+
+Pastoral Digital utiliza [Neon](https://neon.tech/) como base de datos PostgreSQL serverless y [Drizzle ORM](https://orm.drizzle.team/) para la gestión del esquema y las migraciones.
+
+## Arquitectura de la base de datos
+
+La aplicación utiliza las siguientes tablas principales:
+
+- **users** - Información de catequistas (perfil, rol, horario)
+- **attendance_records** - Registros de asistencia a eventos
+- **events** - Eventos de catequesis programados
+- **locations** - Ubicaciones donde se realizan los eventos
+- **sunday_masses** - Registros de asistencia a misas dominicales
+
+## Configuración de Drizzle ORM
+
+La configuración de Drizzle se encuentra en `drizzle.config.ts`:
+
+```typescript drizzle.config.ts
+import { defineConfig } from 'drizzle-kit'
+import 'dotenv/config'
+
+export default defineConfig({
+  schema: './db/schema.ts',
+  out: './migrations',
+  dialect: 'postgresql',
+  dbCredentials: {
+    url: process.env.DATABASE_URL!,
+  },
+})
+```
+
+### Parámetros de configuración
+
+- **schema**: Ruta al archivo que define el esquema de la base de datos (`./db/schema.ts`)
+- **out**: Directorio donde se guardarán las migraciones generadas (`./migrations`)
+- **dialect**: Dialecto de base de datos (PostgreSQL)
+- **dbCredentials**: Credenciales de conexión (lee `DATABASE_URL` del archivo `.env`)
+
+## Comandos disponibles
+
+Pastoral Digital incluye varios scripts en `package.json` para gestionar la base de datos:
+
+### db:generate
+
+Genera archivos de migración basados en los cambios en el esquema:
+
+```bash
+pnpm db:generate
+```
+
+Este comando:
+1. Lee el esquema actual en `db/schema.ts`
+2. Compara con el estado de la base de datos
+3. Genera archivos SQL de migración en `./migrations`
+
+### db:migrate
+
+Ejecuta las migraciones pendientes en la base de datos:
+
+```bash
+pnpm db:migrate
+```
+
+Este comando:
+1. Lee los archivos de migración en `./migrations`
+2. Ejecuta las migraciones que aún no se han aplicado
+3. Actualiza la base de datos al estado más reciente
+
+### db:push
+
+Sincroniza el esquema directamente con la base de datos (sin generar migraciones):
+
+```bash
+pnpm db:push
+```
+
+<Warning>
+  Este comando es útil para desarrollo rápido, pero **no se recomienda en producción**. Usa `db:generate` y `db:migrate` para un control adecuado de las migraciones.
+</Warning>
+
+### db:pull
+
+Extrae el esquema actual de la base de datos:
+
+```bash
+pnpm db:pull
+```
+
+Útil cuando necesitas sincronizar cambios realizados directamente en la base de datos.
+
+### db:studio
+
+Abre Drizzle Studio para explorar y editar la base de datos visualmente:
+
+```bash
+pnpm db:studio
+```
+
+Drizzle Studio se abrirá en tu navegador, permitiéndote:
+- Ver todas las tablas y sus datos
+- Ejecutar consultas SQL
+- Editar registros manualmente
+- Explorar relaciones entre tablas
+
+## Configuración inicial
+
+<Steps>
+  <Step title="Crear base de datos en Neon">
+    1. Crea una cuenta en [Neon](https://neon.tech/)
+    2. Crea un nuevo proyecto
+    3. Copia la URL de conexión
+    4. Agrega la URL al archivo `.env`:
+
+    ```env
+    DATABASE_URL=postgresql://user:password@host/database?sslmode=require
+    ```
+
+    <Note>
+      Asegúrate de que la URL incluya `?sslmode=require` al final para conexiones seguras.
+    </Note>
+  </Step>
+
+  <Step title="Generar migraciones">
+    Genera los archivos de migración basados en el esquema definido:
+
+    ```bash
+    pnpm db:generate
+    ```
+
+    Esto creará archivos SQL en el directorio `./migrations` con las tablas y relaciones necesarias.
+  </Step>
+
+  <Step title="Ejecutar migraciones">
+    Aplica las migraciones a tu base de datos:
+
+    ```bash
+    pnpm db:migrate
+    ```
+
+    Este comando creará todas las tablas, índices y relaciones en tu base de datos Neon.
+  </Step>
+
+  <Step title="Verificar la configuración">
+    Abre Drizzle Studio para verificar que las tablas se crearon correctamente:
+
+    ```bash
+    pnpm db:studio
+    ```
+
+    Deberías ver las siguientes tablas:
+    - `users`
+    - `attendance_records`
+    - `events`
+    - `locations`
+    - `sunday_masses`
+  </Step>
+</Steps>
+
+## Esquema de la base de datos
+
+El esquema completo se define en `db/schema.ts` e incluye:
+
+### Tabla: users
+
+Almacena información de los catequistas:
+
+```typescript
+usersTable = {
+  id: text().primaryKey(),
+  dni: text(),
+  firstName: text('first_name').notNull(),
+  lastName: text('last_name').notNull(),
+  email: text().notNull().unique(),
+  phoneNumber: text('phone_number').notNull(),
+  dateOfBirth: date('date_of_birth').notNull(),
+  category: userCategoryEnum().notNull(), // STUDENT, ALUMNI, TEACHER
+  studentCode: text('student_code'),
+  role: userRoleEnum().default('MEMBER').notNull(), // MEMBER, ADMIN
+  schedule: userScheduleEnum().default('FULL_TIME').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}
+```
+
+**Enums utilizados:**
+- `user_category_enum`: `STUDENT`, `ALUMNI`, `TEACHER`
+- `user_role_enum`: `MEMBER`, `ADMIN`
+- `user_schedule_enum`: `FULL_TIME`, `PRIMERA_COMUNION`, `CONFIRMACION`, `LOGISTICA`, `SEMILLEROS`, `COORDINADOR`
+
+### Tabla: attendance_records
+
+Registra las asistencias de los catequistas a eventos:
+
+```typescript
+attendanceRecordsTable = {
+  id: uuid().primaryKey(),
+  userId: text('user_id').references(() => usersTable.id),
+  eventId: integer('event_id').references(() => eventsTable.id),
+  checkInTime: timestamp('check_in_time').defaultNow().notNull(),
+  status: attendanceStatusEnum().default('A_TIEMPO').notNull(),
+  registeredBy: text('registered_by').references(() => usersTable.id),
+  method: AttendanceRecordMethodEnum().default('QR').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}
+```
+
+**Enums utilizados:**
+- `attendance_status_enum`: `A_TIEMPO`, `TARDANZA`, `DOBLE_TARDANZA`, `FALTA_JUSTIFICADA`, `TARDANZA_JUSTIFICADA`, `FALTA_INJUSTIFICADA`
+- `attendance_record_method_enum`: `MANUAL`, `QR`, `NFC`
+
+**Índices:**
+- Índice único en (`userId`, `eventId`) - un catequista solo puede tener un registro por evento
+- Índices en `userId`, `eventId`, y `status` para optimizar consultas
+
+### Tabla: events
+
+Almacena los eventos de catequesis:
+
+```typescript
+eventsTable = {
+  id: integer().primaryKey().generatedAlwaysAsIdentity(),
+  name: text().notNull(),
+  description: text(),
+  date: timestamp('date').notNull(),
+  secondTurnDate: timestamp('second_turn_date').notNull(),
+  endDate: timestamp('end_date').notNull(),
+  locationId: integer('location_id').references(() => locationsTable.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}
+```
+
+**Índices:**
+- Índice en `date` para búsquedas por fecha
+
+### Tabla: locations
+
+Almacena las ubicaciones de los eventos:
+
+```typescript
+locationsTable = {
+  id: integer().primaryKey().generatedAlwaysAsIdentity(),
+  name: text().notNull(),
+  address: text().notNull(),
+  city: text().default('Trujillo').notNull(),
+  postalCode: text('postal_code').notNull(),
+  country: text('country').default('Perú').notNull(),
+  googleMapsUrl: text('google_maps_url').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}
+```
+
+### Tabla: sunday_masses
+
+Registra la asistencia a misas dominicales:
+
+```typescript
+sundayMassesTable = {
+  id: uuid().primaryKey(),
+  userId: text('user_id').references(() => usersTable.id),
+  parish: text().notNull(),
+  sundayDate: date('sunday_date').notNull().defaultNow(),
+  evidenceFileKey: text('evidence_file_key').notNull().unique(),
+  evidenceFileHash: text('evidence_file_hash').notNull().unique(),
+  verified: boolean('verified').default(false).notNull(),
+  verifiedBy: text('verified_by').references(() => usersTable.id),
+  verifiedAt: timestamp('verified_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}
+```
+
+**Índices:**
+- Índice único en (`userId`, `sundayDate`) - un catequista solo puede registrar una misa por domingo
+- Índices en `userId` y `verified` para optimizar consultas
+
+## Relaciones
+
+El esquema define las siguientes relaciones:
+
+- **users → attendance_records**: Un usuario tiene muchos registros de asistencia
+- **events → attendance_records**: Un evento tiene muchos registros de asistencia
+- **locations → events**: Una ubicación puede tener muchos eventos
+- **users → sunday_masses**: Un usuario tiene muchos registros de misas dominicales
+
+## Migraciones en producción
+
+<Warning>
+  En producción, siempre usa el flujo `db:generate` → `db:migrate` para mantener un historial de cambios.
+</Warning>
+
+Para aplicar cambios al esquema en producción:
+
+<Steps>
+  <Step title="Modificar el esquema">
+    Edita `db/schema.ts` con los cambios necesarios.
+  </Step>
+
+  <Step title="Generar migración">
+    ```bash
+    pnpm db:generate
+    ```
+  </Step>
+
+  <Step title="Revisar la migración">
+    Revisa los archivos SQL generados en `./migrations` para asegurarte de que los cambios sean correctos.
+  </Step>
+
+  <Step title="Ejecutar en producción">
+    Después de desplegar el código:
+    ```bash
+    pnpm db:migrate
+    ```
+  </Step>
+</Steps>
+
+## Respaldos
+
+Neon ofrece respaldos automáticos de tu base de datos. Para configurar respaldos adicionales:
+
+1. Ve al dashboard de Neon
+2. Selecciona tu proyecto
+3. Configura "Backups" según tus necesidades
+4. Considera crear respaldos manuales antes de migraciones importantes
+
+## Solución de problemas
+
+### Error: "relation does not exist"
+
+Esto indica que las migraciones no se han ejecutado. Ejecuta:
+```bash
+pnpm db:migrate
+```
+
+### Error: "connect ECONNREFUSED"
+
+Verifica que:
+- La variable `DATABASE_URL` esté correctamente configurada
+- Tu IP esté permitida en el firewall de Neon
+- La URL incluya `?sslmode=require`
+
+### Las migraciones no se aplican
+
+Asegúrate de que:
+- El directorio `./migrations` contenga los archivos SQL
+- La conexión a la base de datos sea exitosa
+- No haya errores de sintaxis en los archivos de migración
+
+## Próximos pasos
+
+- [Configurar autenticación](/admin/authentication)
+- [Revisar variables de entorno](/admin/environment-variables)
+- [Volver a configuración inicial](/admin/setup)

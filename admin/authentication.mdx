@@ -1,0 +1,334 @@
+---
+title: Configuración de autenticación
+description: Configurar Clerk para autenticación de usuarios en Pastoral Digital
+---
+
+Pastoral Digital utiliza [Clerk](https://clerk.com/) como sistema de autenticación completo que maneja registro, inicio de sesión, gestión de sesiones y perfiles de usuario.
+
+## ¿Por qué Clerk?
+
+Clerk proporciona:
+
+- **Autenticación segura** con múltiples métodos (email, OAuth, etc.)
+- **UI preconfigurada** para registro e inicio de sesión
+- **Gestión de sesiones** automática
+- **Soporte para PWAs** y aplicaciones offline
+- **Sincronización con la base de datos** mediante webhooks
+- **Localización** en español para usuarios hispanohablantes
+
+## Configuración inicial
+
+<Steps>
+  <Step title="Crear cuenta en Clerk">
+    1. Ve a [clerk.com](https://clerk.com/) y crea una cuenta
+    2. Haz clic en "Create Application"
+    3. Nombra tu aplicación (ejemplo: "Pastoral Digital")
+    4. Selecciona los métodos de autenticación que deseas habilitar
+  </Step>
+
+  <Step title="Obtener las claves de API">
+    En el dashboard de Clerk:
+    
+    1. Ve a "API Keys" en el menú lateral
+    2. Copia la "Publishable key"
+    3. Copia la "Secret key"
+    4. Agrégalas a tu archivo `.env`:
+
+    ```env
+    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+    CLERK_SECRET_KEY=sk_test_...
+    ```
+
+    <Warning>
+      La "Secret key" nunca debe exponerse al cliente. Mantenla privada y segura.
+    </Warning>
+  </Step>
+
+  <Step title="Configurar rutas de autenticación">
+    Agrega las siguientes variables a tu `.env`:
+
+    ```env
+    NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+    NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+    NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL=/dashboard
+    NEXT_PUBLIC_CLERK_SIGN_IN_FORCE_REDIRECT_URL=/dashboard
+    NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL=/onboarding
+    NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL=/onboarding
+    ```
+
+    **Explicación de las rutas:**
+    - `SIGN_IN_URL`: Página de inicio de sesión
+    - `SIGN_UP_URL`: Página de registro
+    - `SIGN_IN_FALLBACK_REDIRECT_URL`: Redirección después de iniciar sesión (si no hay URL previa)
+    - `SIGN_IN_FORCE_REDIRECT_URL`: Redirección forzada después de iniciar sesión
+    - `SIGN_UP_FALLBACK_REDIRECT_URL`: Redirección después de registrarse (proceso de onboarding)
+    - `SIGN_UP_FORCE_REDIRECT_URL`: Redirección forzada después de registrarse
+  </Step>
+
+  <Step title="Configurar URLs permitidas">
+    En el dashboard de Clerk, ve a "Paths" y configura:
+
+    **Development:**
+    - Home URL: `http://localhost:3000`
+    - Sign in URL: `http://localhost:3000/sign-in`
+    - Sign up URL: `http://localhost:3000/sign-up`
+
+    **Production:**
+    - Home URL: `https://tu-dominio.com`
+    - Sign in URL: `https://tu-dominio.com/sign-in`
+    - Sign up URL: `https://tu-dominio.com/sign-up`
+  </Step>
+</Steps>
+
+## Flujo de autenticación
+
+### Registro de nuevo usuario
+
+1. **Usuario visita `/sign-up`**
+   - Se muestra el formulario de registro de Clerk
+   - El usuario ingresa su email y contraseña
+
+2. **Verificación de email**
+   - Clerk envía un código de verificación
+   - El usuario ingresa el código
+
+3. **Redirección a onboarding**
+   - Después de verificar, el usuario es redirigido a `/onboarding`
+   - En onboarding, se completa el perfil con datos adicionales:
+     - DNI (consultado via Decolecta API)
+     - Número de teléfono
+     - Fecha de nacimiento
+     - Categoría (estudiante, egresado, profesor)
+     - Horario de catequesis
+
+4. **Sincronización con la base de datos**
+   - Los datos del usuario se guardan en la tabla `users`
+   - El ID de Clerk se usa como clave primaria
+
+### Inicio de sesión
+
+1. **Usuario visita `/sign-in`**
+   - Se muestra el formulario de inicio de sesión de Clerk
+   - El usuario ingresa sus credenciales
+
+2. **Validación de credenciales**
+   - Clerk valida email y contraseña
+   - Se crea una sesión segura
+
+3. **Redirección al dashboard**
+   - Usuario autenticado es redirigido a `/dashboard`
+   - La sesión permanece activa
+
+## Configuración de métodos de autenticación
+
+En el dashboard de Clerk, puedes habilitar múltiples métodos:
+
+### Email/Password (Recomendado)
+
+1. Ve a "User & Authentication" → "Email, Phone, Username"
+2. Habilita "Email address"
+3. Configura "Verification method" como "Email code"
+4. Activa "Require email address"
+
+### Autenticación social (Opcional)
+
+Puedes habilitar proveedores como Google, Facebook, etc.:
+
+1. Ve a "User & Authentication" → "Social Connections"
+2. Selecciona los proveedores deseados (ejemplo: Google)
+3. Configura las credenciales del proveedor
+4. Guarda los cambios
+
+<Note>
+  Para Pastoral Digital, se recomienda mantener solo email/password para simplificar el proceso de onboarding.
+</Note>
+
+## Personalización de la interfaz
+
+### Localización en español
+
+Pastoral Digital usa `@clerk/localizations` para mostrar la interfaz en español:
+
+```typescript
+import { esES } from '@clerk/localizations'
+import { ClerkProvider } from '@clerk/nextjs'
+
+export default function RootLayout({ children }) {
+  return (
+    <ClerkProvider localization={esES}>
+      {children}
+    </ClerkProvider>
+  )
+}
+```
+
+### Temas personalizados
+
+La aplicación utiliza `@clerk/themes` para aplicar un tema personalizado:
+
+```typescript
+import { dark } from '@clerk/themes'
+
+<ClerkProvider
+  appearance={{
+    baseTheme: dark,
+    variables: {
+      colorPrimary: '#tu-color-primario',
+    },
+  }}
+>
+```
+
+## Protección de rutas
+
+### Rutas públicas vs privadas
+
+Las rutas se protegen automáticamente mediante middleware:
+
+**Rutas públicas** (no requieren autenticación):
+- `/`
+- `/sign-in`
+- `/sign-up`
+
+**Rutas privadas** (requieren autenticación):
+- `/dashboard`
+- `/onboarding`
+- `/profile`
+- Todas las demás rutas de la aplicación
+
+### Verificación de roles
+
+Pastoral Digital tiene dos roles:
+
+1. **MEMBER** (catequista regular)
+   - Acceso al dashboard
+   - Visualización de asistencias propias
+   - Registro de misas dominicales
+
+2. **ADMIN** (coordinador)
+   - Todos los permisos de MEMBER
+   - Registro de asistencias de otros catequistas
+   - Gestión de eventos
+   - Verificación de misas dominicales
+
+La verificación de roles se realiza en el servidor:
+
+```typescript
+import { currentUser } from '@clerk/nextjs/server'
+import { db } from '@/db'
+
+export async function requireAdmin() {
+  const clerkUser = await currentUser()
+  if (!clerkUser) throw new Error('No autenticado')
+  
+  const dbUser = await db.query.usersTable.findFirst({
+    where: (users, { eq }) => eq(users.id, clerkUser.id),
+  })
+  
+  if (dbUser?.role !== 'ADMIN') {
+    throw new Error('Permisos insuficientes')
+  }
+  
+  return dbUser
+}
+```
+
+## Sincronización con la base de datos
+
+### Webhooks de Clerk
+
+Para mantener sincronizados los datos entre Clerk y tu base de datos:
+
+<Steps>
+  <Step title="Crear endpoint de webhook">
+    Crea un endpoint en tu aplicación para recibir eventos de Clerk (ejemplo: `/api/webhooks/clerk`).
+  </Step>
+
+  <Step title="Configurar webhook en Clerk">
+    1. Ve a "Webhooks" en el dashboard de Clerk
+    2. Haz clic en "Add Endpoint"
+    3. Ingresa la URL: `https://tu-dominio.com/api/webhooks/clerk`
+    4. Selecciona los eventos a escuchar:
+       - `user.created`
+       - `user.updated`
+       - `user.deleted`
+  </Step>
+
+  <Step title="Validar y procesar eventos">
+    En tu endpoint, valida la firma del webhook y actualiza la base de datos según el evento recibido.
+  </Step>
+</Steps>
+
+### Datos almacenados
+
+Cuando un usuario se registra en Clerk, los siguientes datos se sincronizan con la tabla `users`:
+
+- `id`: ID de usuario de Clerk (clave primaria)
+- `email`: Email del usuario
+- `firstName`: Nombre
+- `lastName`: Apellido
+
+Los datos adicionales se completan durante el onboarding:
+- DNI, teléfono, fecha de nacimiento, categoría, horario, etc.
+
+## Gestión de sesiones
+
+### Duración de sesión
+
+En el dashboard de Clerk, configura:
+
+1. Ve a "Sessions"
+2. Configura "Session lifetime": 7 días (recomendado para PWA)
+3. Habilita "Multi-session handling" si deseas permitir múltiples sesiones
+
+### Cierre de sesión
+
+Los usuarios pueden cerrar sesión desde cualquier página protegida mediante el componente `<UserButton />` de Clerk.
+
+## Seguridad
+
+### Mejores prácticas
+
+<Warning>
+  - Nunca expongas `CLERK_SECRET_KEY` en el cliente
+  - Usa HTTPS en producción
+  - Habilita 2FA para cuentas de administrador
+  - Revisa regularmente los logs de autenticación en Clerk
+</Warning>
+
+### Protección contra ataques
+
+Clerk incluye protección automática contra:
+- Ataques de fuerza bruta
+- Inyección SQL
+- XSS (Cross-Site Scripting)
+- CSRF (Cross-Site Request Forgery)
+
+## Solución de problemas
+
+### Error: "Clerk: Publishable key not found"
+
+Verifica que:
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` esté en tu `.env`
+- El archivo `.env` esté en la raíz del proyecto
+- Hayas reiniciado el servidor después de agregar la variable
+
+### Redirección incorrecta después del login
+
+Verifica que:
+- Las variables `CLERK_SIGN_IN_FALLBACK_REDIRECT_URL` y `CLERK_SIGN_IN_FORCE_REDIRECT_URL` apunten a la ruta correcta
+- Las rutas existan en tu aplicación
+- No haya conflictos en el middleware de Next.js
+
+### Usuario no aparece en la base de datos
+
+Verifica que:
+- Los webhooks estén configurados correctamente
+- El endpoint de webhook esté accesible públicamente
+- Los eventos `user.created` estén habilitados
+
+## Próximos pasos
+
+- [Configurar variables de entorno](/admin/environment-variables)
+- [Configurar base de datos](/admin/database-setup)
+- [Volver a configuración inicial](/admin/setup)

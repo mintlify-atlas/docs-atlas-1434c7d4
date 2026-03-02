@@ -1,0 +1,201 @@
+---
+title: Gestión de usuarios
+description: Administra catequistas, visualiza información detallada y asigna programas desde el panel de administración
+---
+
+## Descripción
+
+La gestión de usuarios permite a los administradores visualizar, buscar y modificar información de todos los catequistas registrados en Pastoral Digital. Esta funcionalidad se encuentra en `/admin/users` (app/(main)/admin/users/page.tsx:1).
+
+## Acceso a la gestión de usuarios
+
+Para acceder a la tabla de administración de catequistas:
+
+<Steps>
+  <Step title="Navega al panel de usuarios">
+    Dirígete a `/admin/users` desde el menú de navegación principal.
+  </Step>
+  
+  <Step title="Visualiza la lista de catequistas">
+    La tabla muestra todos los usuarios registrados con información detallada.
+  </Step>
+  
+  <Step title="Utiliza filtros y búsqueda">
+    Filtra por categoría, programa o busca por nombre para encontrar usuarios específicos.
+  </Step>
+</Steps>
+
+## Información de usuario
+
+La tabla de usuarios (components/admin/adminUserColumns.tsx:11) muestra las siguientes columnas:
+
+<ParamField path="nombreCompleto" type="string">
+  Nombre y apellido del catequista (firstName + lastName)
+</ParamField>
+
+<ParamField path="email" type="string">
+  Correo electrónico del usuario (campo único)
+</ParamField>
+
+<ParamField path="phoneNumber" type="string">
+  Número de teléfono con enlace directo a WhatsApp (+51)
+</ParamField>
+
+<ParamField path="dateOfBirth" type="date">
+  Fecha de nacimiento en formato localizado (es-PE)
+</ParamField>
+
+<ParamField path="age" type="number">
+  Edad calculada automáticamente desde dateOfBirth
+</ParamField>
+
+<ParamField path="studentCode" type="string">
+  Código de estudiante (opcional)
+</ParamField>
+
+<ParamField path="category" type="UserCategory">
+  Categoría del usuario: `STUDENT`, `ALUMNI`, o `TEACHER` (db/schema.ts:25-29)
+</ParamField>
+
+<ParamField path="schedule" type="UserSchedule">
+  Programa asignado al catequista (db/schema.ts:36-43)
+</ParamField>
+
+## Categorías de usuario
+
+Pastoral Digital clasifica a los catequistas en tres categorías:
+
+| Categoría | Valor | Descripción |
+|-----------|-------|-------------|
+| Estudiante | `STUDENT` | Catequistas que son estudiantes activos |
+| Egresado | `ALUMNI` | Catequistas que han completado sus estudios |
+| Docente | `TEACHER` | Catequistas que ejercen como profesores |
+
+## Programas disponibles
+
+Los administradores pueden asignar a los catequistas los siguientes programas (types/index.ts:50-57):
+
+<ParamField path="FULL_TIME" type="string" default="full-time">
+  Programa completo - participación en todas las actividades
+</ParamField>
+
+<ParamField path="PRIMERA_COMUNION" type="string" default="primera-comunion">
+  Programa especializado en preparación para Primera Comunión
+</ParamField>
+
+<ParamField path="CONFIRMACION" type="string" default="confirmacion">
+  Programa especializado en preparación para Confirmación
+</ParamField>
+
+<ParamField path="LOGISTICA" type="string" default="logistica">
+  Programa de apoyo logístico y organizacional
+</ParamField>
+
+<ParamField path="SEMILLEROS" type="string" default="semilleros">
+  Programa de formación inicial para nuevos catequistas
+</ParamField>
+
+<ParamField path="COORDINADOR" type="string" default="coordinador">
+  Programa para coordinadores y líderes de equipo
+</ParamField>
+
+## Acciones disponibles
+
+Desde el menú de acciones de cada usuario (components/admin/adminUserRowActions.tsx:55), puedes:
+
+### Copiar ID de catequista
+
+Copia el identificador único del usuario al portapapeles para uso en otras operaciones.
+
+### Ver Pastoral ID
+
+Abre un diálogo que muestra el código QR personal del catequista, utilizado para:
+- Registro rápido de asistencia mediante escaneo
+- Identificación única en eventos
+- Acceso rápido a información del perfil
+
+### Modificar programa
+
+Cambia el programa asignado al catequista seleccionando una de las opciones disponibles.
+
+<Steps>
+  <Step title="Abre el menú de acciones">
+    Haz clic en el icono de tres puntos en la fila del usuario.
+  </Step>
+  
+  <Step title="Selecciona 'Modificar programa'">
+    Despliega el submenú de programas disponibles.
+  </Step>
+  
+  <Step title="Elige el nuevo programa">
+    Selecciona el programa deseado. La acción se ejecuta inmediatamente.
+  </Step>
+</Steps>
+
+La función `setUserSchedule()` valida que el usuario tenga permisos de administrador antes de actualizar (actions/user.ts:81-107):
+
+```typescript
+export async function setUserSchedule(
+  schedule: UserSchedule,
+  userId: SelectUser['id']
+) {
+  // Check that the user trying to set the schedule is an admin
+  if (!(await checkRole(UserRole.ADMIN))) {
+    return { error: 'No estás autorizado para realizar esta acción.' }
+  }
+
+  return await updateUserSchedule(userId, schedule)
+    .then(async () => {
+      updateTag('users')
+      return {
+        success: 'Programa del catequista actualizado correctamente',
+      }
+    })
+}
+```
+
+## Exportar datos de usuarios
+
+El componente `ExportToCsvUsers` permite exportar la información completa de catequistas a formato CSV:
+
+1. Haz clic en el botón "Exportar" en la parte superior derecha
+2. El archivo CSV se descarga automáticamente con todos los campos de usuario
+3. Utiliza el archivo para análisis externo o respaldos
+
+## Revalidación de datos
+
+Utiliza el botón `RevalidateButton` con tag='users' para actualizar la tabla sin recargar la página completa. Esto es útil cuando:
+
+- Otro administrador ha realizado cambios
+- Necesitas ver actualizaciones recientes
+- Has realizado modificaciones desde otra pestaña
+
+<Warning>
+  La eliminación de catequistas está actualmente deshabilitada en la interfaz para prevenir pérdida accidental de datos.
+</Warning>
+
+## Campos del esquema de usuario
+
+La tabla `users` (db/schema.ts:65-82) contiene los siguientes campos:
+
+```typescript
+usersTable = {
+  id: text().primaryKey(),
+  dni: text(),
+  firstName: text('first_name').notNull(),
+  lastName: text('last_name').notNull(),
+  email: text().notNull().unique(),
+  phoneNumber: text('phone_number').notNull(),
+  dateOfBirth: date('date_of_birth').notNull(),
+  category: userCategoryEnum().notNull(),
+  studentCode: text('student_code'),
+  role: userRoleEnum().default(UserRole.MEMBER).notNull(),
+  schedule: userScheduleEnum().default(UserSchedule.FULL_TIME).notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow().$onUpdate(() => new Date())
+}
+```
+
+<Info>
+  Los campos `createdAt` y `updatedAt` se actualizan automáticamente y no son editables desde la interfaz.
+</Info>

@@ -1,0 +1,213 @@
+---
+title: Ver registros de asistencia
+description: Cómo consultar registros de asistencia e historial
+---
+
+Pastoral Digital App ofrece diferentes vistas de asistencias dependiendo de tu rol en el sistema.
+
+## Ver tus propias asistencias
+
+Todos los usuarios pueden ver su historial personal de asistencias desde la página de Inicio.
+
+<Steps>
+  <Step title="Ir a Inicio">
+    Desde la barra lateral, selecciona **Inicio** (o ya estarás ahí por defecto al iniciar sesión).
+  </Step>
+  
+  <Step title="Desplazarse a la sección">
+    Baja hasta la sección **"Mis Asistencias"** en el panel central.
+  </Step>
+  
+  <Step title="Revisar el historial">
+    Aquí verás una tabla con todos tus registros de asistencia a eventos.
+  </Step>
+</Steps>
+
+### Información mostrada en "Mis Asistencias"
+
+La tabla incluye las siguientes columnas:
+
+- **Evento**: Nombre del evento al que asististe
+- **Fecha**: Fecha y hora de tu registro de entrada
+- **Estado**: Badge de color indicando tu estado de asistencia
+  - A tiempo
+  - Tardanza
+  - Otros estados según configuración
+
+<Note>
+  La tabla muestra tus asistencias más recientes primero. Puedes usar las funciones de ordenamiento para organizar los datos según tus necesidades.
+</Note>
+
+## Ver estadísticas personales
+
+En la página de Inicio, antes de la tabla de asistencias, verás tarjetas con estadísticas:
+
+- Total de asistencias registradas
+- Porcentaje de asistencias a tiempo
+- Eventos próximos
+- Otras métricas relevantes
+
+## Ver registro completo (Administradores)
+
+<Note>
+  Esta sección solo está disponible para usuarios con permisos de administrador.
+</Note>
+
+### Acceder al registro completo
+
+<Steps>
+  <Step title="Abrir la barra lateral">
+    En dispositivos móviles, toca el icono de menú.
+  </Step>
+  
+  <Step title="Navegar a Registro de Asistencia">
+    En la sección administrativa, selecciona **Registro de Asistencia**.
+  </Step>
+  
+  <Step title="Visualizar la tabla">
+    Se mostrará una tabla completa con todas las asistencias registradas en el sistema.
+  </Step>
+</Steps>
+
+### Información en el registro administrativo
+
+La vista administrativa incluye columnas adicionales:
+
+- **Catequista**: Nombre del catequista que asistió
+- **Evento**: Nombre del evento
+- **Fecha de registro**: Cuándo se registró la asistencia
+- **Hora de entrada**: Hora exacta del check-in
+- **Estado**: Badge de estado de asistencia
+- **Registrado por**: Quién escaneó el código QR
+- **Acciones**: Opciones para editar o eliminar el registro (si está habilitado)
+
+### Funciones de la tabla administrativa
+
+La tabla de administración incluye funcionalidades avanzadas:
+
+#### Búsqueda y filtrado
+
+<Steps>
+  <Step title="Usar la barra de búsqueda">
+    En la parte superior de la tabla, escribe en el campo de búsqueda para filtrar registros.
+  </Step>
+  
+  <Step title="Buscar por cualquier campo">
+    La búsqueda funciona en todos los campos: nombres, eventos, fechas, etc.
+  </Step>
+  
+  <Step title="Ver resultados filtrados">
+    La tabla se actualiza automáticamente mostrando solo los registros que coinciden.
+  </Step>
+</Steps>
+
+#### Ordenamiento de columnas
+
+- Haz clic en el encabezado de cualquier columna para ordenar
+- El primer clic ordena ascendente
+- El segundo clic ordena descendente
+- El tercer clic restaura el orden original
+
+#### Paginación
+
+En la parte inferior de la tabla:
+
+- **Selector de filas por página**: Elige cuántos registros ver (10, 20, 50, 100)
+- **Navegación de páginas**: Usa las flechas para moverte entre páginas
+- **Contador**: Muestra qué registros estás viendo del total
+
+<Tip>
+  Para encontrar rápidamente un registro específico, combina la búsqueda con el ordenamiento por fecha o nombre.
+</Tip>
+
+## Actualizar datos
+
+Los datos de asistencia se cargan al abrir la página y se mantienen en caché.
+
+### Revalidar información
+
+<Steps>
+  <Step title="Ubicar el botón de actualización">
+    En la esquina superior derecha de la página de Registro de Asistencia, verás un botón de actualización.
+  </Step>
+  
+  <Step title="Hacer clic en revalidar">
+    Haz clic en el botón para forzar una recarga de los datos desde el servidor.
+  </Step>
+  
+  <Step title="Esperar la actualización">
+    Los datos se recargarán mostrando la información más reciente.
+  </Step>
+</Steps>
+
+<Note>
+  El botón de revalidación solo aparece en la vista administrativa. La vista personal se actualiza automáticamente al recargar la página.
+</Note>
+
+## Ver calendario de asistencias (Administradores)
+
+Además de la tabla, los administradores tienen acceso a una vista de calendario.
+
+<Steps>
+  <Step title="Navegar al calendario">
+    En la barra lateral administrativa, selecciona **Calendario de Asistencia**.
+  </Step>
+  
+  <Step title="Explorar la vista de calendario">
+    Verás las asistencias organizadas por fecha en formato de calendario.
+  </Step>
+  
+  <Step title="Navegar entre meses">
+    Usa los controles del calendario para moverte entre diferentes meses.
+  </Step>
+</Steps>
+
+Esta vista es útil para:
+- Identificar patrones de asistencia
+- Ver distribución de eventos
+- Planificar eventos futuros
+
+## Ver asistencias a misa dominical
+
+En la página de Inicio, además de "Mis Asistencias", hay una sección para asistencias a misa.
+
+### Características de la tabla de misas
+
+- Muestra solo tus registros de misa dominical
+- Incluye fecha y hora de la misa
+- Aparece en la columna derecha junto a "Mis Asistencias"
+
+<Note>
+  Los registros de misa dominical son independientes de las asistencias a eventos de catequesis y se gestionan por separado.
+</Note>
+
+## Exportar registros
+
+Actualmente, la aplicación no incluye una función de exportación integrada. Si necesitas exportar datos:
+
+<Warning>
+  Contacta al administrador del sistema para solicitar un reporte de asistencias. Los administradores tienen acceso a la base de datos y pueden generar reportes personalizados.
+</Warning>
+
+## Entender los estados de asistencia
+
+Los badges de estado usan códigos de color para facilitar la identificación:
+
+- **Verde** o **Azul**: A tiempo
+- **Amarillo** o **Naranja**: Tardanza
+- **Rojo**: Ausente o muy tarde
+- **Gris**: Otros estados
+
+El cálculo exacto del estado depende de:
+- Hora de inicio del evento
+- Hora de registro del catequista
+- Margen de tolerancia configurado en el sistema
+- Horario asignado al catequista (primer o segundo turno)
+
+## Privacidad de los datos
+
+<Warning>
+  Los catequistas regulares solo pueden ver sus propias asistencias. Los registros de otros usuarios son privados y solo accesibles por administradores.
+</Warning>
+
+Los administradores pueden ver todos los registros como parte de sus responsabilidades de gestión, pero deben manejar esta información de manera confidencial y responsable.

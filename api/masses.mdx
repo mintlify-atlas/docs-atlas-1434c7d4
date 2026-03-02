@@ -1,0 +1,503 @@
+---
+title: Masses API
+description: Endpoints y server actions para registros de asistencia a misas dominicales
+---
+
+## Obtener registros de misas
+
+`GET /api/masses`
+
+Obtiene todos los registros de asistencia a misas dominicales.
+
+### Autenticación requerida
+
+<Warning>
+  Este endpoint requiere rol de **ADMIN** o **MANAGER**. Los usuarios con rol `member` recibirán `403 Forbidden`.
+</Warning>
+
+### Respuesta exitosa
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "01930d5e-8f7a-7a3c-9b2f-1234567890ab",
+      "userId": "user_2abc123def456",
+      "parish": "Parroquia Santa María",
+      "sundayDate": "2026-03-01",
+      "evidenceFileKey": "mass-evidence/user_2abc/2026-03-01_abc123.jpg",
+      "evidenceFileHash": "sha256:a1b2c3d4e5f6...",
+      "verified": true,
+      "verifiedBy": "user_admin123",
+      "verifiedAt": "2026-03-02T09:30:00.000Z",
+      "createdAt": "2026-03-01T12:00:00.000Z",
+      "updatedAt": "2026-03-02T09:30:00.000Z",
+      "user": {
+        "id": "user_2abc123def456",
+        "firstName": "Juan",
+        "lastName": "Pérez García",
+        "email": "juan.perez@example.com"
+      },
+      "verifier": {
+        "id": "user_admin123",
+        "firstName": "María",
+        "lastName": "López"
+      }
+    }
+  ]
+}
+```
+
+### Campos de respuesta
+
+<ResponseField name="success" type="boolean">
+  Indica si la solicitud fue exitosa
+</ResponseField>
+
+<ResponseField name="data" type="array">
+  Array de registros de misas dominicales
+  
+  <ResponseField name="data[].id" type="string">
+    UUID v7 del registro de misa
+  </ResponseField>
+  
+  <ResponseField name="data[].userId" type="string">
+    ID del catequista que asistió a misa
+  </ResponseField>
+  
+  <ResponseField name="data[].parish" type="string">
+    Nombre de la parroquia donde asistió
+  </ResponseField>
+  
+  <ResponseField name="data[].sundayDate" type="string">
+    Fecha del domingo (formato: YYYY-MM-DD)
+  </ResponseField>
+  
+  <ResponseField name="data[].evidenceFileKey" type="string">
+    Clave del archivo de evidencia (foto/selfie) en el almacenamiento
+  </ResponseField>
+  
+  <ResponseField name="data[].evidenceFileHash" type="string">
+    Hash SHA-256 del archivo para verificar integridad y unicidad
+  </ResponseField>
+  
+  <ResponseField name="data[].verified" type="boolean">
+    Indica si el registro ha sido verificado por un administrador
+  </ResponseField>
+  
+  <ResponseField name="data[].verifiedBy" type="string" optional>
+    ID del usuario que verificó el registro
+  </ResponseField>
+  
+  <ResponseField name="data[].verifiedAt" type="string" optional>
+    Timestamp de cuándo se verificó el registro
+  </ResponseField>
+  
+  <ResponseField name="data[].user" type="object">
+    Información del usuario que asistió a misa
+  </ResponseField>
+  
+  <ResponseField name="data[].verifier" type="object" optional>
+    Información del usuario que verificó el registro (null si no verificado)
+  </ResponseField>
+</ResponseField>
+
+### Errores
+
+```json
+// No autenticado
+{
+  "success": false,
+  "error": "Unauthorized"
+}
+
+// Sin permisos (requiere admin o manager)
+{
+  "success": false,
+  "error": "Forbidden"
+}
+
+// No hay registros
+{
+  "success": false,
+  "error": "No masses records found"
+}
+
+// Error del servidor
+{
+  "success": false,
+  "error": "Failed to fetch masses data"
+}
+```
+
+### Ejemplo de uso
+
+```typescript
+async function getAllMasses() {
+  const response = await fetch('/api/masses')
+  const { success, data, error } = await response.json()
+
+  if (!success) {
+    throw new Error(error)
+  }
+
+  return data
+}
+
+// Filtrar registros pendientes de verificación
+const masses = await getAllMasses()
+const pending = masses.filter(m => !m.verified)
+const verified = masses.filter(m => m.verified)
+```
+
+## Server Actions
+
+Las operaciones de escritura se realizan mediante Server Actions.
+
+### Registrar asistencia a misa
+
+`postNewMassRecord(formValues: NewSundayMassFormSchema)`
+
+Registra la asistencia de un catequista a misa dominical con evidencia fotográfica.
+
+<Note>
+  Esta función está disponible para cualquier usuario autenticado. El registro solo es posible **domingos** y **lunes antes de las 6:00 PM** (hora de Perú).
+</Note>
+
+#### Parámetros
+
+<ParamField body="parish" type="string" required>
+  Nombre de la parroquia donde asistió
+</ParamField>
+
+<ParamField body="evidenceFileKey" type="string" required>
+  Clave del archivo subido a UploadThing
+</ParamField>
+
+<ParamField body="evidenceFileHash" type="string" required>
+  Hash SHA-256 del archivo para prevenir duplicados
+</ParamField>
+
+#### Respuesta
+
+```typescript
+{
+  success?: string
+  error?: string
+}
+```
+
+#### Ejemplo
+
+```typescript
+import { postNewMassRecord } from '@/actions/mass'
+
+const result = await postNewMassRecord({
+  parish: 'Parroquia Santa María',
+  evidenceFileKey: 'mass-evidence/user_abc/2026-03-01_xyz.jpg',
+  evidenceFileHash: 'sha256:a1b2c3d4e5f6...'
+})
+
+if (result.success) {
+  console.log('Registro de misa enviado con éxito')
+} else {
+  console.error(result.error)
+}
+```
+
+#### Restricciones de tiempo
+
+La función valida la ventana de tiempo permitida (definida en `~/workspace/source/actions/mass.ts:35-43`):
+
+```typescript
+const peruDate = new TZDate(new Date(), 'America/Lima')
+
+const isValidTimeframe =
+  peruDate.getDay() === 0 || // Domingo
+  (peruDate.getDay() === 1 && peruDate.getHours() < 18) // Lunes antes de 6 PM
+
+if (!isValidTimeframe) {
+  return {
+    error: 'El registro de misa solo está disponible los domingos y lunes hasta las 6:00 PM.'
+  }
+}
+```
+
+<Warning>
+  Si se registra un lunes, el sistema ajusta automáticamente `sundayDate` al domingo anterior.
+</Warning>
+
+#### Prevención de duplicados
+
+La base de datos garantiza:
+
+1. **Unicidad por usuario y fecha**: Un catequista solo puede registrar una misa por domingo
+2. **Unicidad de archivo**: El hash del archivo debe ser único (previene reusar la misma foto)
+
+```typescript
+// Índices únicos en la tabla
+uniqueIndex('unq_user_sunday_date').on(table.userId, table.sundayDate)
+```
+
+Intentar crear un duplicado generará un error de base de datos.
+
+### Verificar registro de misa
+
+`verifyMassRecord(massId: string)`
+
+Verifica y aprueba un registro de asistencia a misa.
+
+<Warning>
+  Requiere rol **ADMIN** o **MANAGER**
+</Warning>
+
+#### Parámetros
+
+<ParamField body="massId" type="string" required>
+  UUID del registro de misa a verificar
+</ParamField>
+
+#### Respuesta
+
+```typescript
+{
+  success?: string
+  error?: string
+}
+```
+
+#### Ejemplo
+
+```typescript
+import { verifyMassRecord } from '@/actions/mass'
+
+const result = await verifyMassRecord(
+  '01930d5e-8f7a-7a3c-9b2f-1234567890ab'
+)
+
+if (result.success) {
+  console.log('Asistencia a misa verificada')
+}
+```
+
+#### Proceso de verificación
+
+La función (definida en `~/workspace/source/actions/mass.ts:77-110`):
+
+1. Verifica que el usuario sea admin o manager
+2. Obtiene el ID del verificador actual
+3. Actualiza el registro con:
+   - `verified: true`
+   - `verifiedBy: userId`
+   - `verifiedAt: timestamp actual`
+4. Invalida el cache tag `sundayMasses`
+
+### Rechazar registro de misa
+
+`rejectMassRecord(massId: string)`
+
+Rechaza un registro de asistencia a misa.
+
+<Warning>
+  Requiere rol **ADMIN** o **MANAGER**
+</Warning>
+
+#### Parámetros
+
+<ParamField body="massId" type="string" required>
+  UUID del registro de misa a rechazar
+</ParamField>
+
+#### Respuesta
+
+```typescript
+{
+  success?: string
+  error?: string
+}
+```
+
+#### Ejemplo
+
+```typescript
+import { rejectMassRecord } from '@/actions/mass'
+
+const result = await rejectMassRecord(
+  '01930d5e-8f7a-7a3c-9b2f-1234567890ab'
+)
+
+if (result.success) {
+  console.log('Registro de misa rechazado')
+}
+```
+
+<Note>
+  Rechazar un registro establece `verified: false` y actualiza los campos `verifiedBy` y `verifiedAt` para registrar quién lo rechazó y cuándo.
+</Note>
+
+## Estructura de la base de datos
+
+Los registros de misas se almacenan con el siguiente esquema (definido en `~/workspace/source/db/schema.ts:155-182`):
+
+```typescript
+export const sundayMassesTable = pgTable(
+  'sunday_masses',
+  {
+    id: uuid()
+      .primaryKey()
+      .$defaultFn(() => uuidv7()),
+    userId: text('user_id')
+      .references(() => usersTable.id, { onDelete: 'cascade' })
+      .notNull(),
+    parish: text().notNull(),
+    sundayDate: date('sunday_date').notNull().defaultNow(),
+    evidenceFileKey: text('evidence_file_key').notNull().unique(),
+    evidenceFileHash: text('evidence_file_hash').notNull().unique(),
+    verified: boolean('verified').default(false).notNull(),
+    verifiedBy: text('verified_by').references(() => usersTable.id),
+    verifiedAt: timestamp('verified_at'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at')
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex('unq_user_sunday_date').on(table.userId, table.sundayDate),
+    index('idx_sunday_masses_user_id').on(table.userId),
+    index('idx_sunday_masses_verified').on(table.verified),
+  ]
+)
+```
+
+### Relaciones
+
+- **user**: El catequista que asistió a misa
+- **verifier**: El admin/manager que verificó el registro
+
+### Índices
+
+- `unq_user_sunday_date`: Garantiza un registro por usuario por domingo
+- `idx_sunday_masses_user_id`: Optimiza consultas por usuario
+- `idx_sunday_masses_verified`: Optimiza filtrado por estado de verificación
+
+### Constraints únicos
+
+<Warning>
+  Tanto `evidenceFileKey` como `evidenceFileHash` deben ser únicos en toda la tabla. Esto previene:
+  - Reusar la misma foto para múltiples registros
+  - Subir el mismo archivo dos veces
+</Warning>
+
+## Flujo de trabajo típico
+
+### 1. Catequista registra asistencia (Domingo o Lunes temprano)
+
+```typescript
+// Usuario sube foto de evidencia
+const fileKey = await uploadEvidence(photoFile)
+const fileHash = await calculateHash(photoFile)
+
+// Crea registro
+const result = await postNewMassRecord({
+  parish: 'Parroquia San José',
+  evidenceFileKey: fileKey,
+  evidenceFileHash: fileHash
+})
+```
+
+### 2. Administrador revisa registros pendientes
+
+```typescript
+// Obtener todos los registros
+const { data: masses } = await fetch('/api/masses').then(r => r.json())
+
+// Filtrar no verificados
+const pending = masses.filter(m => !m.verified)
+
+// Mostrar para revisión
+pending.forEach(mass => {
+  console.log(`${mass.user.firstName} - ${mass.parish}`)
+  console.log(`Foto: ${mass.evidenceFileKey}`)
+})
+```
+
+### 3. Administrador verifica o rechaza
+
+```typescript
+import { verifyMassRecord, rejectMassRecord } from '@/actions/mass'
+
+// Si la evidencia es válida
+await verifyMassRecord(mass.id)
+
+// Si la evidencia no es válida
+await rejectMassRecord(mass.id)
+```
+
+## Gestión de archivos de evidencia
+
+La aplicación utiliza UploadThing para almacenar las fotos de evidencia.
+
+### Subida de archivos
+
+Ver configuración en `~/workspace/source/app/api/uploadthing/core.ts`
+
+### Cálculo de hash
+
+El hash SHA-256 se calcula en el cliente antes de subir:
+
+```typescript
+async function calculateFileHash(file: File): Promise<string> {
+  const buffer = await file.arrayBuffer()
+  const hashBuffer = await crypto.subtle.digest('SHA-256', buffer)
+  const hashArray = Array.from(new Uint8Array(hashBuffer))
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+  return `sha256:${hashHex}`
+}
+```
+
+<Note>
+  El hash garantiza que cada foto es única y no se puede reutilizar para registros diferentes.
+</Note>
+
+## Caché y revalidación
+
+Todas las operaciones de escritura invalidan el cache tag `sundayMasses`:
+
+```typescript
+import { updateTag } from 'next/cache'
+
+updateTag('sundayMasses') // Revalida datos en caché
+```
+
+Esto garantiza que las listas de misas se actualicen automáticamente después de:
+- Crear un nuevo registro
+- Verificar un registro
+- Rechazar un registro
+
+## Reportes y estadísticas
+
+Para generar reportes de asistencia a misas:
+
+```typescript
+// Obtener todos los registros
+const { data: masses } = await fetch('/api/masses').then(r => r.json())
+
+// Estadísticas por mes
+const march2026 = masses.filter(m => 
+  m.sundayDate.startsWith('2026-03')
+)
+
+console.log(`Registros en marzo: ${march2026.length}`)
+console.log(`Verificados: ${march2026.filter(m => m.verified).length}`)
+console.log(`Pendientes: ${march2026.filter(m => !m.verified).length}`)
+
+// Por parroquia
+const byParish = masses.reduce((acc, m) => {
+  acc[m.parish] = (acc[m.parish] || 0) + 1
+  return acc
+}, {})
+
+console.log('Asistencias por parroquia:', byParish)
+```

@@ -1,0 +1,172 @@
+---
+title: Perfil de usuario
+description: Gestión de información personal y configuración del catequista
+---
+
+El perfil de usuario almacena toda la información personal y de configuración de cada catequista en la plataforma.
+
+## Información personal
+
+Cada perfil contiene los siguientes datos:
+
+### Datos de identificación
+
+<ParamField path="id" type="text" required>
+  Identificador único del usuario (sincronizado con Clerk)
+</ParamField>
+
+<ParamField path="dni" type="text">
+  Documento Nacional de Identidad del catequista
+</ParamField>
+
+<ParamField path="firstName" type="text" required>
+  Nombre del catequista
+</ParamField>
+
+<ParamField path="lastName" type="text" required>
+  Apellido del catequista
+</ParamField>
+
+### Datos de contacto
+
+<ParamField path="email" type="text" required>
+  Correo electrónico único del usuario
+</ParamField>
+
+<ParamField path="phoneNumber" type="text" required>
+  Número de teléfono de contacto
+</ParamField>
+
+### Información adicional
+
+<ParamField path="dateOfBirth" type="date" required>
+  Fecha de nacimiento del catequista
+</ParamField>
+
+<ParamField path="studentCode" type="text">
+  Código de estudiante (si aplica)
+</ParamField>
+
+## Categorías de usuario
+
+Cada catequista pertenece a una categoría específica:
+
+<CardGroup cols={3}>
+  <Card title="Estudiante" icon="graduation-cap">
+    Catequista en formación activa
+  </Card>
+  <Card title="Egresado" icon="user-graduate">
+    Ex-estudiante que continúa como catequista
+  </Card>
+  <Card title="Profesor" icon="chalkboard-user">
+    Formador o instructor de catequistas
+  </Card>
+</CardGroup>
+
+<ParamField path="category" type="enum" required>
+  Categoría del usuario:
+  - `student`: Estudiante
+  - `alumni`: Egresado
+  - `teacher`: Profesor
+</ParamField>
+
+## Roles del sistema
+
+El sistema maneja dos niveles de permisos:
+
+### Member (Miembro)
+
+Rol predeterminado para todos los catequistas. Permite:
+
+- Ver su propio ID digital
+- Consultar sus asistencias
+- Registrar misas dominicales
+- Ver eventos disponibles
+
+### Admin (Administrador)
+
+Rol con permisos elevados. Permite:
+
+- Todo lo que puede hacer un miembro
+- Registrar asistencias de otros usuarios
+- Crear y gestionar eventos
+- Verificar registros de misas dominicales
+- Acceder a reportes y estadísticas
+
+<ParamField path="role" type="enum" required>
+  Rol del usuario en el sistema (por defecto: member):
+  - `member`: Miembro
+  - `admin`: Administrador
+</ParamField>
+
+<Warning>
+Los roles son asignados por los administradores del sistema. No es posible auto-asignarse el rol de administrador.
+</Warning>
+
+## Horarios de servicio
+
+Cada catequista tiene asignado un horario de servicio:
+
+<ParamField path="schedule" type="enum" required>
+  Tipo de horario (por defecto: full-time):
+  - `full-time`: Tiempo completo
+  - `primera-comunion`: Primera Comunión
+  - `confirmacion`: Confirmación
+  - `logistica`: Logística
+  - `semilleros`: Semilleros
+  - `coordinador`: Coordinador
+</ParamField>
+
+Estos horarios determinan:
+
+- El tipo de catequista mostrado en el ID digital
+- Los eventos a los que debes asistir
+- Las responsabilidades específicas
+
+## Auditoría de cambios
+
+El sistema mantiene un registro de auditoría automático:
+
+<ParamField path="createdAt" type="timestamp" required>
+  Fecha de creación del perfil
+</ParamField>
+
+<ParamField path="updatedAt" type="timestamp" required>
+  Fecha de última actualización (se actualiza automáticamente)
+</ParamField>
+
+## Autenticación y seguridad
+
+La autenticación está integrada con Clerk, proporcionando:
+
+- **Inicio de sesión seguro**: Con múltiples métodos de autenticación
+- **Sincronización automática**: El ID de usuario se sincroniza con Clerk
+- **Protección de datos**: El email debe ser único en todo el sistema
+- **Recuperación de cuenta**: Mediante el correo electrónico registrado
+
+<Info>
+La información del perfil se sincroniza automáticamente con Clerk. Los cambios en nombre o email deben realizarse a través del sistema de autenticación.
+</Info>
+
+## Relaciones del perfil
+
+El perfil de usuario está relacionado con:
+
+- **Registros de asistencia**: Historial completo de asistencias del usuario
+- **Misas dominicales**: Registros de participación en misas
+- **Asistencias registradas**: Lista de asistencias que el usuario ha registrado como administrador (si tiene permisos)
+- **Verificaciones de misas**: Misas que el usuario ha verificado como administrador
+
+## Restricciones de integridad
+
+El sistema garantiza:
+
+- Email único por usuario
+- ID sincronizado con Clerk
+- Todos los campos requeridos deben completarse
+- El rol y horario siempre tienen valores por defecto
+- Las actualizaciones se registran automáticamente
+
+<Note>
+Cualquier cambio en tu información personal debe ser coordinado con los administradores del sistema para mantener la integridad de los datos.
+</Note>
